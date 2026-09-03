@@ -22,11 +22,11 @@ admin_bp = Blueprint(
 # ============================================================
 
 def require_admin():
-    """Decorator to ensure user is an admin"""
     def decorator(f):
         @functools.wraps(f)
-        @jwt_required()
         def decorated_function(*args, **kwargs):
+            from flask_jwt_extended import verify_jwt_in_request
+            verify_jwt_in_request()
             user_id = int(get_jwt_identity())
             user = db.session.get(User, user_id)
             if not user:
