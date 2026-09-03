@@ -20,6 +20,7 @@ import { getUniversity } from "../data/universities";
 import { useAuth } from "../context/useAuth";
 import { useToast } from "../context/useToast";
 import PropertyWeather from "../components/PropertyWeather";
+import { TrustScorePanel } from "../components/TrustScore";
 import WalkingTime from "../components/WalkingTime";
 
 const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000/api").replace(/\/$/, "");
@@ -570,6 +571,14 @@ export default function AccommodationDetails() {
                 latitude={listing.latitude}
                 longitude={listing.longitude}
               />
+
+              <section className="mt-10">
+                <h2 className="text-2xl font-extrabold text-slate-900">Trust Score</h2>
+                <p className="mt-1 text-sm text-slate-500">How trustworthy is this listing based on verified signals?</p>
+                <div className="mt-5">
+                  <TrustScorePanel propertyId={listing.id} />
+                </div>
+              </section>
             </div>
 
             <aside className="lg:sticky lg:top-24 lg:self-start">

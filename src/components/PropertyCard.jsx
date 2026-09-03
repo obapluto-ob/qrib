@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
-import { CalendarDays, CheckCircle, AlertTriangle, XCircle, ShieldCheck, Star } from "lucide-react";
+import { CalendarDays, ShieldCheck, Star } from "lucide-react";
 import { getUniversity } from "../data/universities";
 import WalkingTime from "./WalkingTime";
+import { TrustBadge } from "./TrustScore";
 
 const fallbackImage =
   "https://images.unsplash.com/photo-1494526585095-c41746248156?w=1200&q=80";
@@ -108,6 +109,10 @@ export default function PropertyCard({ listing, affordability }) {
             )}
           </div>
         )}
+
+        <div className="mt-3">
+          <TrustBadge propertyId={listing.id} />
+        </div>
       </div>
     </Link>
   );

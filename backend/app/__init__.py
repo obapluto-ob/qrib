@@ -50,6 +50,7 @@ from .routes.reviews import reviews_bp
 from .routes.messages import messages_bp
 from .routes.host_verification import host_verification_bp
 from .routes.notifications import notifications_bp
+from .routes.trust_score import trust_score_bp
 
 
 load_dotenv()
@@ -113,6 +114,19 @@ def create_app():
             "ALTER TABLE payments ADD COLUMN IF NOT EXISTS "
             "merchant_request_id VARCHAR(120)"
         ))
+        # All columns added by migrations — safe to run every startup
+        db.session.execute(db.text("ALTER TABLE payments ADD COLUMN IF NOT EXISTS transaction_id VARCHAR(120)"))
+        db.session.execute(db.text("ALTER TABLE payments ADD COLUMN IF NOT EXISTS gateway_response TEXT"))
+        db.session.execute(db.text("ALTER TABLE properties ADD COLUMN IF NOT EXISTS water_cost NUMERIC(10,2) DEFAULT 0"))
+        db.session.execute(db.text("ALTER TABLE properties ADD COLUMN IF NOT EXISTS electricity_cost NUMERIC(10,2) DEFAULT 0"))
+        db.session.execute(db.text("ALTER TABLE properties ADD COLUMN IF NOT EXISTS available_from VARCHAR(20)"))
+        db.session.execute(db.text("ALTER TABLE properties ADD COLUMN IF NOT EXISTS available_to VARCHAR(20)"))
+        db.session.execute(db.text("ALTER TABLE properties ADD COLUMN IF NOT EXISTS semester_label VARCHAR(50)"))
+        db.session.execute(db.text("ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token VARCHAR(255)"))
+        db.session.execute(db.text("ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expires TIMESTAMPTZ"))
+        db.session.execute(db.text("ALTER TABLE properties ADD COLUMN IF NOT EXISTS latitude NUMERIC(10,7)"))
+        db.session.execute(db.text("ALTER TABLE properties ADD COLUMN IF NOT EXISTS longitude NUMERIC(10,7)"))
+        db.session.execute(db.text("ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'student'"))
         db.session.commit()
 
         for university in UNIVERSITY_SEED:
@@ -227,6 +241,7 @@ def create_app():
     app.register_blueprint(messages_bp)
     app.register_blueprint(host_verification_bp)
     app.register_blueprint(notifications_bp)
+    app.register_blueprint(trust_score_bp)
 
     # ============================================================
     # FLASK SHELL
