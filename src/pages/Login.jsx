@@ -34,41 +34,55 @@ export default function Login() {
   // GOOGLE AUTH
   // ---------------------------------------------------------
   useEffect(() => {
-    if (!GOOGLE_CLIENT_ID || !window.google) return;
+    if (!GOOGLE_CLIENT_ID) return undefined;
 
-    window.google.accounts.id.initialize({
-      client_id: GOOGLE_CLIENT_ID,
-      callback: async (response) => {
-        setLoading(true);
-        try {
-          // Call without role first — backend returns is_new_user flag
-          // without creating account if no role provided
-          const result = await googleLogin({ credential: response.credential });
-          setLoading(false);
-          if (!result.ok && result.is_new_user) {
-            // New user — show role picker
-            setGooglePending({ credential: response.credential });
-            setGoogleRole("student");
-          } else if (result.ok && !result.is_new_user) {
-            // Existing user — logged in, redirect
-            showToast("Signed in with Google.", "success");
-            navigate(result.user?.role === "host" ? "/host/dashboard" : "/student/dashboard", { replace: true });
-          } else {
-            showToast(result.message || "Google sign-in failed.", "error");
+    let attempts = 0;
+    const initializeGoogle = () => {
+      if (!window.google?.accounts?.id || !googleBtnRef.current) {
+        attempts += 1;
+        if (attempts >= 100) return;
+        return;
+      }
+
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: async (response) => {
+          setLoading(true);
+          try {
+            const result = await googleLogin({ credential: response.credential });
+            if (!result.ok && result.is_new_user) {
+              setGooglePending({ credential: response.credential });
+              setGoogleRole("student");
+            } else if (result.ok && !result.is_new_user) {
+              showToast("Signed in with Google.", "success");
+              navigate(result.user?.role === "host" ? "/host/dashboard" : "/student/dashboard", { replace: true });
+            } else {
+              showToast(result.message || "Google sign-in failed.", "error");
+            }
+          } catch {
+            showToast("Google sign-in failed. Try again.", "error");
+          } finally {
+            setLoading(false);
           }
-        } catch {
-          setLoading(false);
-          showToast("Google sign-in failed. Try again.", "error");
-        }
-      },
-    });
+        },
+      });
 
-    window.google.accounts.id.renderButton(googleBtnRef.current, {
-      theme: "outline",
-      size: "large",
-      width: 360,
-      text: "continue_with",
-    });
+      googleBtnRef.current.replaceChildren();
+      window.google.accounts.id.renderButton(googleBtnRef.current, {
+        theme: "outline",
+        size: "large",
+        width: Math.min(360, Math.max(240, googleBtnRef.current.clientWidth)),
+        text: "continue_with",
+      });
+      return true;
+    };
+
+    const readyCheck = setInterval(() => {
+      if (initializeGoogle()) clearInterval(readyCheck);
+    }, 100);
+    initializeGoogle();
+
+    return () => clearInterval(readyCheck);
   }, []);
 
   const [form, setForm] = useState({
