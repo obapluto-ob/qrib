@@ -4,6 +4,15 @@ import { AuthContext } from "./AuthContextValue";
 const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000/api").replace(/\/$/, "");
 const TOKEN_KEY = "qrib_access_token";
 
+async function readApiResponse(response) {
+  const text = await response.text();
+  try {
+    return text ? JSON.parse(text) : {};
+  } catch {
+    return { error: `Server returned an unexpected response (${response.status}).` };
+  }
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [ready, setReady] = useState(false);
@@ -26,7 +35,7 @@ export function AuthProvider({ children }) {
       },
     })
       .then(async (response) => {
-        const data = await response.json();
+        const data = await readApiResponse(response);
 
         if (!response.ok) {
           if (response.status === 401 || response.status === 403) {
@@ -70,7 +79,7 @@ export function AuthProvider({ children }) {
         }),
       });
 
-      const data = await response.json();
+      const data = await readApiResponse(response);
 
       if (!response.ok) {
         return {
@@ -137,7 +146,7 @@ export function AuthProvider({ children }) {
         }),
       });
 
-      const data = await response.json();
+      const data = await readApiResponse(response);
 
       if (!response.ok) {
         return {

@@ -94,6 +94,25 @@ def create_app():
             "ALTER TABLE messages ADD COLUMN IF NOT EXISTS "
             "message_type VARCHAR(30) NOT NULL DEFAULT 'text'"
         ))
+        db.session.execute(db.text(
+            "ALTER TABLE messages ADD COLUMN IF NOT EXISTS "
+            "read_at TIMESTAMP WITH TIME ZONE"
+        ))
+        db.session.execute(db.text(
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS typing_to_id INTEGER"
+        ))
+        db.session.execute(db.text(
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS "
+            "typing_until TIMESTAMP WITH TIME ZONE"
+        ))
+        db.session.execute(db.text(
+            "ALTER TABLE payments ADD COLUMN IF NOT EXISTS "
+            "checkout_request_id VARCHAR(120)"
+        ))
+        db.session.execute(db.text(
+            "ALTER TABLE payments ADD COLUMN IF NOT EXISTS "
+            "merchant_request_id VARCHAR(120)"
+        ))
         db.session.commit()
 
         for university in UNIVERSITY_SEED:
