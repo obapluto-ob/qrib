@@ -4,6 +4,7 @@ import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import PropertyCard from "../components/PropertyCard";
 import { universities } from "../data/universities";
+import { useAuth } from "../context/useAuth";
 
 const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000/api").replace(/\/$/, "");
 
@@ -78,7 +79,7 @@ export default function Home() {
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   // =========================================================
@@ -514,6 +515,7 @@ export default function Home() {
           HOST CTA
       ====================================================== */}
 
+      {user?.role !== "host" && user?.role !== "admin" && (
       <section className="mx-auto max-w-[1280px] px-5 py-12 sm:px-8 lg:px-10 lg:py-16">
 
         <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 p-8 sm:p-10 lg:p-12">
@@ -538,7 +540,7 @@ export default function Home() {
             </div>
 
             <Link
-              to="/login?mode=signup"
+              to={user?.role === "student" ? "/host" : "/login?mode=signup"}
               className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3.5 text-sm font-bold text-white transition hover:bg-blue-700"
             >
               List your property
@@ -550,6 +552,7 @@ export default function Home() {
         </div>
 
       </section>
+      )}
 
       <Footer />
     </div>
