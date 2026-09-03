@@ -40,6 +40,8 @@ def property_to_dict(property):
         "distance_km": float(property.distance_km or 0),
         "rating": float(property.rating or 0),
         "verified_host": property.verified_host,
+        "water_cost": float(property.water_cost or 0),
+        "electricity_cost": float(property.electricity_cost or 0),
         "host_id": property.host_id,
         "university_id": property.university_id,
         "created_at": property.created_at.isoformat(),
@@ -172,6 +174,8 @@ def create_property():
         distance_km=data.get("distance_km", 0),
         rating=data.get("rating", 0),
         verified_host=False,
+        water_cost=data.get("water_cost", 0),
+        electricity_cost=data.get("electricity_cost", 0),
         host_id=user_id,
         university_id=normalized_university_id,
     )
@@ -284,17 +288,10 @@ def update_property(property_id):
         }), 400
 
     allowed_fields = [
-        "title",
-        "area",
-        "city",
-        "description",
-        "price_per_month",
-        "property_type",
-        "bedrooms",
-        "bathrooms",
-        "furnished",
-        "image",
-        "distance_km",
+        "title", "area", "city", "description",
+        "price_per_month", "property_type", "bedrooms",
+        "bathrooms", "furnished", "image", "distance_km",
+        "water_cost", "electricity_cost",
     ]
 
     for field in allowed_fields:

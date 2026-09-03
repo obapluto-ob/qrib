@@ -31,6 +31,9 @@ class Property(db.Model):
 
     verified_host = db.Column(db.Boolean, default=False)
 
+    water_cost = db.Column(db.Numeric(10, 2), default=0)
+    electricity_cost = db.Column(db.Numeric(10, 2), default=0)
+
     host_id = db.Column(
         db.Integer,
         db.ForeignKey("users.id"),

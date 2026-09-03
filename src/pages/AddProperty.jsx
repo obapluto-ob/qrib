@@ -37,6 +37,8 @@ export default function AddProperty() {
     image: "",
     description: "",
     distanceKm: "",
+    waterCost: "",
+    electricityCost: "",
   });
 
   const [amenities, setAmenities] = useState([]);
@@ -138,6 +140,8 @@ export default function AddProperty() {
           furnished: form.furnished,
           image: form.image ? form.image.trim() : null,
           distance_km: Number(form.distanceKm) || 0,
+          water_cost: Number(form.waterCost) || 0,
+          electricity_cost: Number(form.electricityCost) || 0,
         }),
       });
 
@@ -342,6 +346,30 @@ export default function AddProperty() {
                   placeholder="0.8"
                   className="w-full border border-slate-200 rounded-lg p-3.5"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-ink mb-2">Avg. water cost / month (KSh)</label>
+                <input
+                  type="number" min="0"
+                  value={form.waterCost}
+                  onChange={update("waterCost")}
+                  placeholder="500"
+                  className="w-full border border-slate-200 rounded-lg p-3.5"
+                />
+                <p className="text-xs text-muted mt-1">Leave 0 if included in rent</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-ink mb-2">Avg. electricity cost / month (KSh)</label>
+                <input
+                  type="number" min="0"
+                  value={form.electricityCost}
+                  onChange={update("electricityCost")}
+                  placeholder="800"
+                  className="w-full border border-slate-200 rounded-lg p-3.5"
+                />
+                <p className="text-xs text-muted mt-1">Leave 0 if included in rent</p>
               </div>
 
               <div className="flex items-center gap-3 md:pt-8">

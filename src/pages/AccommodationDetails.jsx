@@ -53,6 +53,8 @@ function normalizeProperty(property) {
     amenities: Array.isArray(property.amenities)
       ? property.amenities
       : [],
+    waterCost: Number(property.water_cost || 0),
+    electricityCost: Number(property.electricity_cost || 0),
   };
 }
 
@@ -579,6 +581,34 @@ export default function AccommodationDetails() {
                 </div>
 
                 <div className="my-6 h-px bg-slate-200" />
+
+                {(listing.waterCost > 0 || listing.electricityCost > 0) && (
+                  <div className="mb-6 rounded-xl border border-blue-100 bg-blue-50 p-4">
+                    <p className="text-xs font-bold text-blue-900 uppercase tracking-wide mb-3">True monthly cost</p>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-slate-600">Rent</span>
+                        <span className="font-bold text-slate-900">KSh {listing.pricePerMonth.toLocaleString()}</span>
+                      </div>
+                      {listing.waterCost > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">Water (avg.)</span>
+                          <span className="font-semibold text-slate-700">KSh {listing.waterCost.toLocaleString()}</span>
+                        </div>
+                      )}
+                      {listing.electricityCost > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">Electricity (avg.)</span>
+                          <span className="font-semibold text-slate-700">KSh {listing.electricityCost.toLocaleString()}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between border-t border-blue-200 pt-2">
+                        <span className="font-bold text-blue-900">Total / month</span>
+                        <span className="font-extrabold text-blue-900">KSh {(listing.pricePerMonth + listing.waterCost + listing.electricityCost).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="space-y-4">
                   <div className="flex items-center justify-between text-sm">
