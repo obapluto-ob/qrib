@@ -1,7 +1,9 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from sqlalchemy import func, desc
+from flask_migrate import upgrade as db_upgrade
+from sqlalchemy import func, desc, text
 from datetime import datetime, timezone
+import os
 
 from app.extensions import db
 from app.models import User, Property, Booking, Review, Notification, HostVerification, Payment, Message
@@ -36,6 +38,23 @@ def require_admin():
         decorated_function.__name__ = f.__name__
         return decorated_function
     return decorator
+
+
+# ============================================================
+# RUN MIGRATIONS (emergency endpoint)
+# POST /api/admin/run-migrations
+# ============================================================
+
+@admin_bp.post("/run-migrations")
+def run_migrations():
+    secret = (request.get_json() or {}).get("secret", "")
+    if secret != os.getenv("ADMIN_SEED_SECRET"):
+        return jsonify({"error": "Forbidden"}), 403
+    try:
+        db_upgrade()
+        return jsonify({"message": "Migrations applied successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 # ============================================================
