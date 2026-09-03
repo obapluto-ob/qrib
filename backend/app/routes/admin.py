@@ -603,59 +603,49 @@ def get_reports():
 @admin_bp.post("/send-email")
 @require_admin()
 def send_admin_email():
-    data = request.get_json() or {}
-    audience = data.get("audience", "")  # all | students | hosts | one
-    to_email = data.get("to_email", "").strip()
-    subject = data.get("subject", "").strip()
-    body_text = data.get("body", "").strip()
+    try:
+        data = request.get_json() or {}
+        audience = data.get("audience", "")
+        to_email = data.get("to_email", "").strip()
+        subject = data.get("subject", "").strip()
+        body_text = data.get("body", "").strip()
 
-    if not subject or not body_text:
-        return jsonify({"error": "Subject and body are required"}), 400
+        if not subject or not body_text:
+            return jsonify({"error": "Subject and body are required"}), 400
 
-    html = f"""
-    <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8fafc;padding:40px 16px">
-      <div style="max-width:560px;margin:auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08)">
-        <div style="background:#2563EB;padding:20px 32px">
-          <span style="color:#fff;font-size:20px;font-weight:800">Qrib</span>
-          <span style="color:#bfdbfe;font-size:13px;margin-left:10px">Student Accommodation</span>
-        </div>
-        <div style="padding:32px">
-          <p style="color:#1e293b;font-size:15px;line-height:1.7;white-space:pre-line">{body_text}</p>
-        </div>
-        <div style="padding:16px 32px;background:#f1f5f9;font-size:12px;color:#94a3b8;text-align:center">
-          Qrib Kenya &mdash; Student accommodation made easier.
-        </div>
-      </div>
-    </div>"""
+        html = f"""<div style="font-family:sans-serif;padding:32px"><h2>Qrib</h2><p style="white-space:pre-line">{body_text}</p></div>"""
 
-    if audience == "one":
-        if not to_email:
-            return jsonify({"error": "to_email is required for single recipient"}), 400
-        recipients = [to_email]
-    elif audience == "students":
-        recipients = [u.email for u in User.query.filter_by(role="student").all()]
-    elif audience == "hosts":
-        recipients = [u.email for u in User.query.filter_by(role="host").all()]
-    elif audience == "all":
-        recipients = [u.email for u in User.query.filter(User.role.in_(["student", "host"])).all()]
-    else:
-        return jsonify({"error": "audience must be one of: all, students, hosts, one"}), 400
-
-    if not recipients:
-        return jsonify({"error": "No recipients found"}), 404
-
-    sent = 0
-    failed = 0
-    last_error = None
-    for email in recipients:
-        err = _send(email, subject, html)
-        if err is None:
-            sent += 1
+        if audience == "one":
+            if not to_email:
+                return jsonify({"error": "to_email is required for single recipient"}), 400
+            recipients = [to_email]
+        elif audience == "students":
+            recipients = [u.email for u in User.query.filter_by(role="student").all()]
+        elif audience == "hosts":
+            recipients = [u.email for u in User.query.filter_by(role="host").all()]
+        elif audience == "all":
+            recipients = [u.email for u in User.query.filter(User.role.in_(["student", "host"])).all()]
         else:
-            failed += 1
-            last_error = err
+            return jsonify({"error": "audience must be one of: all, students, hosts, one"}), 400
 
-    return jsonify({"sent": sent, "failed": failed, "total": len(recipients), "error": last_error}), 200
+        if not recipients:
+            return jsonify({"error": "No recipients found"}), 404
+
+        sent = 0
+        failed = 0
+        last_error = None
+        for email in recipients:
+            err = _send(email, subject, html)
+            if err is None:
+                sent += 1
+            else:
+                failed += 1
+                last_error = err
+
+        return jsonify({"sent": sent, "failed": failed, "total": len(recipients), "error": last_error}), 200
+    except Exception as e:
+        import traceback
+        return jsonify({"error": str(e), "trace": traceback.format_exc()}), 500
 
 
 # ============================================================
