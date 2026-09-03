@@ -331,6 +331,10 @@ export default function StudentDashboard() {
     return Math.round((filled / fields.length) * 100);
   })();
 
+  const profileAvatar = typeof savedProfile.avatarUrl === "string"
+    ? savedProfile.avatarUrl.trim()
+    : "";
+
   const firstName = user?.name
     ? user.name.split(" ")[0]
     : "Student";
@@ -856,9 +860,18 @@ export default function StudentDashboard() {
 
               <section className="rounded-2xl border border-slate-200 bg-white p-6">
                 <div className="flex items-center gap-4">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-lg font-black text-white">
-                    {initials}
-                  </div>
+                  {profileAvatar ? (
+                    <img
+                      src={profileAvatar}
+                      alt="Your avatar"
+                      className="h-14 w-14 rounded-full object-cover"
+                      onError={(event) => { event.currentTarget.style.display = "none"; }}
+                    />
+                  ) : (
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-lg font-black text-white">
+                      {initials}
+                    </div>
+                  )}
 
                   <div className="min-w-0">
                     <h3 className="truncate font-black text-slate-900">
@@ -899,7 +912,7 @@ export default function StudentDashboard() {
                   to="/student/profile"
                   className="mt-5 flex items-center justify-center rounded-xl bg-slate-100 px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-200"
                 >
-                  Complete your profile
+                  {profileCompletion === 100 ? "Edit profile" : "Complete your profile"}
                 </Link>
               </section>
 

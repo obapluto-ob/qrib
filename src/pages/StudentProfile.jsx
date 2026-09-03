@@ -57,6 +57,7 @@ export default function StudentProfile() {
     yearOfStudy: saved.yearOfStudy || "1",
     studentId: saved.studentId || "",
     bio: saved.bio || "",
+    avatarUrl: saved.avatarUrl || "",
   });
 
   const [saving, setSaving] = useState(false);
@@ -109,6 +110,8 @@ export default function StudentProfile() {
         .toUpperCase()
     : "S";
 
+  const avatarUrl = form.avatarUrl.trim();
+
   return (
     <div className="min-h-screen bg-[#f7f8fa]">
       <Navbar />
@@ -127,16 +130,27 @@ export default function StudentProfile() {
             Your profile
           </h1>
           <p className="mt-2 text-slate-500">
-            Complete your profile so hosts know more about you.
+            {completion === 100
+              ? "Keep your details up to date so hosts have the latest information."
+              : "Complete your profile so hosts know more about you."}
           </p>
         </div>
 
         {/* Profile card */}
         <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6">
           <div className="flex items-center gap-5">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-600 text-xl font-black text-white">
-              {initials}
-            </div>
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt="Your avatar"
+                className="h-16 w-16 rounded-full object-cover"
+                onError={(event) => { event.currentTarget.style.display = "none"; }}
+              />
+            ) : (
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-600 text-xl font-black text-white">
+                {initials}
+              </div>
+            )}
 
             <div>
               <h2 className="text-xl font-black text-slate-900">
@@ -163,6 +177,22 @@ export default function StudentProfile() {
               />
             </div>
           </div>
+        </div>
+
+        <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6">
+          <label className="block text-sm font-semibold text-slate-800 mb-2">
+            Profile photo URL
+          </label>
+          <input
+            type="url"
+            value={form.avatarUrl}
+            onChange={update("avatarUrl")}
+            placeholder="https://example.com/your-photo.jpg"
+            className="w-full rounded-lg border border-slate-200 p-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+          />
+          <p className="mt-2 text-xs text-slate-500">
+            Paste a direct image link from Cloudinary, ImgBB, or another image host.
+          </p>
         </div>
 
         {/* Form */}
