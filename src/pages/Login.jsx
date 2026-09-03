@@ -27,6 +27,8 @@ export default function Login() {
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotSent, setForgotSent] = useState(false);
   const googleBtnRef = useRef(null);
+  const intentRef = useRef(intent); // always fresh inside Google callback
+  intentRef.current = intent;
 
   // Google role picker
   const [googlePending, setGooglePending] = useState(null); // { credential }
@@ -38,26 +40,39 @@ export default function Login() {
   useEffect(() => {
     if (!GOOGLE_CLIENT_ID) return undefined;
 
-    let attempts = 0;
+    let initialised = false;
+
     const initializeGoogle = () => {
-      if (!window.google?.accounts?.id || !googleBtnRef.current) {
-        attempts += 1;
-        if (attempts >= 100) return;
-        return;
-      }
+      if (!window.google?.accounts?.id || !googleBtnRef.current) return false;
+      if (initialised) return true;
+      initialised = true;
 
       window.google.accounts.id.initialize({
         client_id: GOOGLE_CLIENT_ID,
         callback: async (response) => {
           setLoading(true);
           try {
+            const currentIntent = intentRef.current;
             const result = await googleLogin({ credential: response.credential });
+
             if (!result.ok && result.is_new_user) {
+              // New user — show role picker, pre-select based on intent
               setGooglePending({ credential: response.credential });
-              setGoogleRole(intent === "host" ? "host" : "student");
-            } else if (result.ok && !result.is_new_user) {
-              showToast("Signed in with Google.", "success");
-              navigate(result.user?.role === "host" ? "/host/dashboard" : "/student/dashboard", { replace: true });
+              setGoogleRole(currentIntent === "host" ? "host" : "student");
+            } else if (result.ok) {
+              const userRole = result.user?.role;
+              if (currentIntent === "host" && userRole !== "host") {
+                // Existing student account trying to become host — tell them
+                showToast("This Google account is linked to a student account. Please sign up with a new account to become a host.", "error");
+              } else {
+                showToast("Signed in with Google.", "success");
+                navigate(
+                  userRole === "host"
+                    ? (currentIntent === "host" ? "/host/verification" : "/host/dashboard")
+                    : "/student/dashboard",
+                  { replace: true }
+                );
+              }
             } else {
               showToast(result.message || "Google sign-in failed.", "error");
             }
