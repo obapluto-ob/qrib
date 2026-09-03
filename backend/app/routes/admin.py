@@ -25,15 +25,19 @@ def require_admin():
     def decorator(f):
         @functools.wraps(f)
         def decorated_function(*args, **kwargs):
-            from flask_jwt_extended import verify_jwt_in_request
-            verify_jwt_in_request()
-            user_id = int(get_jwt_identity())
-            user = db.session.get(User, user_id)
-            if not user:
-                return jsonify({"error": "User not found"}), 404
-            if user.role != "admin":
-                return jsonify({"error": "Admin access required"}), 403
-            return f(*args, **kwargs)
+            try:
+                from flask_jwt_extended import verify_jwt_in_request
+                verify_jwt_in_request()
+                user_id = int(get_jwt_identity())
+                user = db.session.get(User, user_id)
+                if not user:
+                    return jsonify({"error": "User not found"}), 404
+                if user.role != "admin":
+                    return jsonify({"error": "Admin access required"}), 403
+                return f(*args, **kwargs)
+            except Exception as e:
+                import traceback
+                return jsonify({"error": str(e), "trace": traceback.format_exc()}), 500
         return decorated_function
     return decorator
 
