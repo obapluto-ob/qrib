@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, CheckCircle, AlertTriangle, XCircle, ShieldCheck, Star } from "lucide-react";
 import { getUniversity } from "../data/universities";
 import WalkingTime from "./WalkingTime";
 
@@ -41,8 +41,8 @@ export default function PropertyCard({ listing, affordability }) {
         />
 
         {listing.verifiedHost && (
-          <span className="absolute left-3 top-3 rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-bold text-brand">
-            ✓ Verified
+          <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-bold text-brand">
+            <ShieldCheck className="h-3 w-3" /> Verified
           </span>
         )}
 
@@ -58,7 +58,7 @@ export default function PropertyCard({ listing, affordability }) {
           <span>{listing.area}</span>
 
           <span className="flex items-center gap-1 font-semibold text-ink">
-            ★ {listing.rating}
+            <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" /> {listing.rating}
           </span>
         </div>
 

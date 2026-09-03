@@ -229,7 +229,7 @@ export default function HostVerification() {
                   step === s.id ? "bg-blue-600 text-white" :
                   "bg-slate-200 text-slate-500"
                 }`}>
-                  {step > s.id ? "✓" : s.id}
+                  {step > s.id ? <CheckCircle className="h-4 w-4" /> : s.id}
                 </div>
                 {i < STEPS.length - 1 && (
                   <div className={`h-px flex-1 transition ${step > s.id ? "bg-emerald-300" : "bg-slate-200"}`} />
@@ -336,7 +336,7 @@ export default function HostVerification() {
                   { label: "Full name", value: form.full_name },
                   { label: "Phone", value: form.phone },
                   { label: "ID number", value: form.id_number },
-                  { label: "Document", value: form.document_url ? "Uploaded ✓" : "Not provided" },
+                  { label: "Document", value: form.document_url ? "Uploaded" : "Not provided", ok: !!form.document_url },
                 ].map((item) => (
                   <div key={item.label} className="flex items-center justify-between px-4 py-3">
                     <span className="text-sm text-slate-500">{item.label}</span>

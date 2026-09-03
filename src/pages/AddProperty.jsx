@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Check } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000/api").replace(/\/$/, "");
@@ -450,7 +451,7 @@ export default function AddProperty() {
                         : "border-line text-muted hover:border-brand"
                     }`}
                   >
-                    {selected ? "✓ " : ""}
+                    {selected && <Check className="inline h-3.5 w-3.5 mr-1" />}
                     {amenity}
                   </button>
                 );

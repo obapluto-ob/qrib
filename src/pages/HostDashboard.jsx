@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { ShieldCheck, ShieldAlert, ShieldX, Clock, CheckCircle, Star } from "lucide-react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { useAuth } from "../context/useAuth";
@@ -41,13 +42,41 @@ export default function HostDashboard() {
   const verificationComplete = verification?.verified === true;
   const verificationPending = verification?.status === "pending";
   const verificationRejected = verification?.status === "rejected";
-  const verificationLabel = verificationComplete
-    ? "Verified"
-    : verificationPending
-      ? "Under review"
-      : verificationRejected
-        ? "Action required"
-        : "Not submitted";
+
+  const VerificationBadge = () => {
+    if (verification === null) return null;
+    if (verificationComplete) return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">
+        <ShieldCheck className="h-3.5 w-3.5" /> Verified
+      </span>
+    );
+    if (verificationPending) return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-700">
+        <Clock className="h-3.5 w-3.5" /> Under review
+      </span>
+    );
+    if (verificationRejected) return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-1 text-xs font-bold text-red-700">
+        <ShieldX className="h-3.5 w-3.5" /> Action required
+      </span>
+    );
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">
+        <ShieldAlert className="h-3.5 w-3.5" /> Not submitted
+      </span>
+    );
+  };
+
+  const fetchVerification = useCallback(async () => {
+    const token = localStorage.getItem(TOKEN_KEY);
+    try {
+      const res = await fetch(`${API_URL}/host-verification/me`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      const data = res.ok ? await res.json() : null;
+      setVerification(data || {});
+    } catch { /* silent */ }
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -56,22 +85,19 @@ export default function HostDashboard() {
       try {
         const token = localStorage.getItem(TOKEN_KEY);
 
-        const [propertiesResponse, bookingsResponse, verificationResponse] = await Promise.all([
+        const [propertiesResponse, bookingsResponse] = await Promise.all([
           fetch(`${API_URL}/properties`, {
             headers: token ? { Authorization: `Bearer ${token}` } : {},
           }),
           fetch(`${API_URL}/bookings`, {
             headers: token ? { Authorization: `Bearer ${token}` } : {},
           }),
-          fetch(`${API_URL}/host-verification/me`, {
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-          }),
         ]);
+
+        await fetchVerification();
 
         const propertiesData = await propertiesResponse.json();
         const bookingsData = await bookingsResponse.json();
-        const verificationData = verificationResponse.ok ? await verificationResponse.json() : null;
-        setVerification(verificationData || {});
 
         if (!propertiesResponse.ok) {
           throw new Error(propertiesData.error || "Unable to load your listings.");
@@ -119,7 +145,11 @@ export default function HostDashboard() {
     }
 
     loadDashboard();
-  }, [user]);
+
+    // Poll verification status every 30s so badge updates when admin approves/rejects
+    const poll = setInterval(fetchVerification, 30000);
+    return () => clearInterval(poll);
+  }, [user, fetchVerification]);
 
   const handleRespond = async (bookingId, action) => {
     const token = localStorage.getItem(TOKEN_KEY);
@@ -148,12 +178,12 @@ export default function HostDashboard() {
           <div>
             <p className="text-sm text-muted">Host dashboard</p>
 
-            <h1 className="text-3xl font-extrabold text-ink mt-1">
+            <p className="text-3xl font-extrabold text-ink mt-1">
               Welcome, {user?.name || "Host"}
-            </h1>
-
-            <p className="text-muted mt-2">
+            </p>
+            <p className="text-muted mt-2 flex items-center gap-2">
               Manage your Qrib properties and booking requests.
+              <VerificationBadge />
             </p>
           </div>
 
@@ -221,14 +251,13 @@ export default function HostDashboard() {
                 </p>
               </div>
 
-              <div className="flex items-center gap-3">
-                <span className="rounded-full bg-white/70 px-3 py-1.5 text-xs font-bold">{verificationLabel}</span>
-                {!verificationPending && (
-                  <Link to="/host/verification" className="inline-flex items-center justify-center rounded-lg bg-amber-600 px-4 py-2 text-sm font-bold text-white hover:bg-amber-700">
-                    {verificationRejected ? "Review and resubmit" : "Start verification"}
-                  </Link>
-                )}
-              </div>
+                <div className="flex items-center gap-3">
+                  {!verificationPending && (
+                    <Link to="/host/verification" className="inline-flex items-center justify-center rounded-lg bg-amber-600 px-4 py-2 text-sm font-bold text-white hover:bg-amber-700">
+                      {verificationRejected ? "Review and resubmit" : "Start verification"}
+                    </Link>
+                  )}
+                </div>
             </div>
           </div>
         )}

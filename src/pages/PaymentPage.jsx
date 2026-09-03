@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Check } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import Footer from "../components/Footer";
 import Navbar from "../components/Navbar";
@@ -188,9 +189,9 @@ export default function PaymentPage() {
           <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
             {/* Progress */}
             <div className="flex items-center gap-2 mb-8">
-              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500 text-xs font-bold text-white">✓</div>
+              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500 text-white"><Check className="h-4 w-4" /></div>
               <div className="h-px flex-1 bg-blue-200" />
-              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500 text-xs font-bold text-white">✓</div>
+              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500 text-white"><Check className="h-4 w-4" /></div>
               <div className="h-px flex-1 bg-blue-200" />
               <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">3</div>
             </div>
