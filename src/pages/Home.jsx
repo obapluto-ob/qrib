@@ -7,6 +7,28 @@ import { universities } from "../data/universities";
 
 const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000/api").replace(/\/$/, "");
 
+function normalizeProperty(p) {
+  return {
+    id: p.id,
+    title: p.title || "Student Accommodation",
+    area: p.area || "",
+    city: p.city || "",
+    description: p.description || "",
+    image: p.image || "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=900&q=80",
+    pricePerMonth: Number(p.price_per_month || 0),
+    type: p.property_type || "Accommodation",
+    bedrooms: Number(p.bedrooms || 0),
+    bathrooms: Number(p.bathrooms || 0),
+    distanceKm: Number(p.distance_km || 0),
+    rating: Number(p.rating || 0),
+    furnished: Boolean(p.furnished),
+    verifiedHost: Boolean(p.verified_host),
+    hostId: p.host_id,
+    universityId: p.university_id,
+    universityName: p.university_name || "",
+  };
+}
+
 const fallbackHomeImage =
   "https://images.unsplash.com/photo-1494526585095-c41746248156?w=1200&q=80";
 
@@ -79,7 +101,7 @@ export default function Home() {
           );
         }
 
-        setProperties(Array.isArray(data) ? data : []);
+        setProperties(Array.isArray(data) ? data.map(normalizeProperty) : []);
       } catch (err) {
         console.error("Property loading error:", err);
 
