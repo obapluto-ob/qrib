@@ -64,9 +64,9 @@ def get_notifications():
                 "id": notification.id,
                 "title": notification.title,
                 "body": notification.body,
-                "type": notification.type,
+                "type": getattr(notification, "type", "info"),
                 "is_read": notification.is_read,
-                "data": notification.data or {},
+                "data": getattr(notification, "data", {}) or {},
                 "created_at": notification.created_at.isoformat() if notification.created_at else None,
             }
             for notification in paginated.items
@@ -102,9 +102,9 @@ def get_notification(notification_id):
             "id": notification.id,
             "title": notification.title,
             "body": notification.body,
-            "type": notification.type,
+            "type": getattr(notification, "type", "info"),
             "is_read": notification.is_read,
-            "data": notification.data or {},
+            "data": getattr(notification, "data", {}) or {},
             "created_at": notification.created_at.isoformat() if notification.created_at else None,
         }), 200
 

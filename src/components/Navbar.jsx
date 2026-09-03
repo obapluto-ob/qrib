@@ -1,14 +1,45 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
 import { Bell, MessageSquare } from "lucide-react";
 import logo from "../assets/qrib-logo.png";
+
+const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000/api").replace(/\/$/, "");
+const TOKEN_KEY = "qrib_access_token";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   const [menuOpen, setMenuOpen] = useState(false);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+
+  useEffect(() => {
+    if (!user) {
+      setUnreadNotifications(0);
+      return undefined;
+    }
+
+    const fetchUnreadCount = async () => {
+      const token = localStorage.getItem(TOKEN_KEY);
+      if (!token) return;
+      try {
+        const response = await fetch(`${API_URL}/notifications/unread-count`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setUnreadNotifications(Number(data.unread_count) || 0);
+        }
+      } catch {
+        // Notification polling should not interrupt navigation.
+      }
+    };
+
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 10000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   const dashboardPath =
     user?.role === "host"
@@ -101,10 +132,15 @@ export default function Navbar() {
 
                 <Link
                   to="/notifications"
-                  className="flex items-center justify-center h-10 w-10 rounded-lg text-slate-600 transition hover:bg-slate-100 hover:text-brand"
+                  className="relative flex items-center justify-center h-10 w-10 rounded-lg text-slate-600 transition hover:bg-slate-100 hover:text-brand"
                   title="Notifications"
                 >
                   <Bell size={20} />
+                  {unreadNotifications > 0 && (
+                    <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white">
+                      {unreadNotifications > 99 ? "99+" : unreadNotifications}
+                    </span>
+                  )}
                 </Link>
 
                 <Link
