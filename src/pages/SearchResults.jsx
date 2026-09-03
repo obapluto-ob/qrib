@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { CheckCircle, AlertTriangle, XCircle, Wallet } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
 import Navbar from "../components/Navbar";
@@ -288,7 +289,7 @@ export default function SearchResults() {
           </p>
 
           <div className="mt-5 flex items-center gap-3 rounded-2xl border border-blue-200 bg-blue-50 px-5 py-4">
-            <svg className="h-5 w-5 text-blue-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2" strokeLinecap="round"/></svg>
+            <Wallet className="h-5 w-5 text-blue-600 shrink-0" />
             <div className="flex flex-1 flex-wrap items-center gap-3">
               <label className="text-sm font-bold text-blue-800 whitespace-nowrap">
                 My monthly budget (KSh)
@@ -303,7 +304,7 @@ export default function SearchResults() {
               />
               {monthlyBudget > 0 && (
                 <span className="text-xs text-blue-600 font-medium">
-                  Properties are sorted by affordability. Green ≤30% · Yellow 30–50% · Red &gt;50% of your budget
+                  Properties are sorted by affordability. <CheckCircle className="inline h-3.5 w-3.5 text-green-600" /> ≤30% · <AlertTriangle className="inline h-3.5 w-3.5 text-yellow-500" /> 30–50% · <XCircle className="inline h-3.5 w-3.5 text-red-500" /> &gt;50% of your budget
                 </span>
               )}
             </div>
