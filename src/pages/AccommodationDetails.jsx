@@ -673,6 +673,56 @@ export default function AccommodationDetails() {
       </main>
 
       <Footer />
+
+      {showBookNow && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-extrabold text-slate-900">Book this accommodation</h2>
+                <p className="mt-1 text-sm text-slate-500">Choose a move-in date to continue to payment.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowBookNow(false)}
+                className="text-2xl leading-none text-slate-400 hover:text-slate-700"
+                aria-label="Close booking dialog"
+              >
+                &times;
+              </button>
+            </div>
+
+            <label className="mt-6 block text-sm font-bold text-slate-700">
+              Move-in date
+              <input
+                type="date"
+                value={moveInDate}
+                min={new Date().toISOString().split("T")[0]}
+                onChange={(event) => setMoveInDate(event.target.value)}
+                className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
+              />
+            </label>
+
+            <div className="mt-6 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowBookNow(false)}
+                className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={bookingLoading}
+                onClick={handleBookNow}
+                className="flex-1 rounded-xl bg-brand px-4 py-3 text-sm font-bold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {bookingLoading ? "Creating booking..." : "Continue to payment"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
