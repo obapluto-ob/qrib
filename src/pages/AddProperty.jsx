@@ -40,7 +40,6 @@ export default function AddProperty() {
   });
 
   const [amenities, setAmenities] = useState([]);
-  const [uploadingImage, setUploadingImage] = useState(false);
 
   const update = (key) => (e) => {
     setForm((current) => ({
@@ -59,32 +58,14 @@ export default function AddProperty() {
 
   const handleImageUpload = (event) => {
     const file = event.target.files?.[0];
-
-    if (!file) {
-      return;
-    }
-
+    if (!file) return;
     if (!file.type.startsWith("image/")) {
       showToast("Please upload an image file.", "error");
       return;
     }
-
-    setUploadingImage(true);
-
-    const reader = new FileReader();
-
-    reader.onload = () => {
-      const result = typeof reader.result === "string" ? reader.result : "";
-      setForm((current) => ({ ...current, image: result }));
-      setUploadingImage(false);
-    };
-
-    reader.onerror = () => {
-      showToast("The image could not be read. Please try another file.", "error");
-      setUploadingImage(false);
-    };
-
-    reader.readAsDataURL(file);
+    // Warn host — base64 bloats the DB. Ask them to use a URL instead.
+    showToast("For best results, upload your image to Cloudinary or ImgBB and paste the URL below.", "info");
+    event.target.value = "";
   };
 
   const [submitting, setSubmitting] = useState(false);
@@ -425,35 +406,18 @@ export default function AddProperty() {
             <div className="space-y-5 mt-5">
               <div>
                 <label className="block text-sm font-semibold text-ink mb-2">
-                  Property image
+                  Property image URL
                 </label>
-
-                <div className="space-y-3">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="w-full rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-700 file:mr-4 file:rounded-full file:border-0 file:bg-blue-600 file:px-4 file:py-2 file:text-sm file:font-bold file:text-white"
-                  />
-
-                  <input
-                    type="text"
-                    value={form.image.startsWith("data:image") ? "" : form.image}
-                    onChange={update("image")}
-                    placeholder="Or paste an image URL"
-                    className="w-full border border-slate-200 rounded-lg p-3.5"
-                  />
-                </div>
-
+                <input
+                  type="text"
+                  value={form.image}
+                  onChange={update("image")}
+                  placeholder="https://res.cloudinary.com/... or https://i.ibb.co/..."
+                  className="w-full border border-slate-200 rounded-lg p-3.5"
+                />
                 <p className="text-xs text-muted mt-2">
-                  Upload a photo from your device, or paste a direct image URL. If both are empty, Qrib will use a default listing image.
+                  Upload your photo to <a href="https://imgbb.com" target="_blank" rel="noreferrer" className="text-blue-600 underline font-semibold">ImgBB</a> (free) or <a href="https://cloudinary.com" target="_blank" rel="noreferrer" className="text-blue-600 underline font-semibold">Cloudinary</a> and paste the direct image link here.
                 </p>
-
-                {uploadingImage && (
-                  <p className="mt-2 text-xs font-semibold text-blue-600">
-                    Uploading image...
-                  </p>
-                )}
               </div>
 
               <div>

@@ -29,7 +29,7 @@ def property_to_dict(property):
         "bedrooms": property.bedrooms,
         "bathrooms": property.bathrooms,
         "furnished": property.furnished,
-        "image": property.image or "",
+        "image": property.image if property.image and not property.image.startswith("data:image") else "",
         "distance_km": float(property.distance_km or 0),
         "rating": float(property.rating or 0),
         "verified_host": property.verified_host,
