@@ -45,8 +45,8 @@ def property_to_dict(property):
         "available_from": getattr(property, "available_from", None),
         "available_to": getattr(property, "available_to", None),
         "semester_label": getattr(property, "semester_label", None),
-        "latitude": getattr(property, "latitude", None),
-        "longitude": getattr(property, "longitude", None),
+        "latitude": float(property.latitude) if getattr(property, "latitude", None) else None,
+        "longitude": float(property.longitude) if getattr(property, "longitude", None) else None,
         "host_id": property.host_id,
         "university_id": property.university_id,
         "created_at": property.created_at.isoformat(),
@@ -184,6 +184,8 @@ def create_property():
         available_from=data.get("available_from"),
         available_to=data.get("available_to"),
         semester_label=data.get("semester_label"),
+        latitude=data.get("latitude"),
+        longitude=data.get("longitude"),
         host_id=user_id,
         university_id=normalized_university_id,
     )
@@ -301,6 +303,7 @@ def update_property(property_id):
         "bathrooms", "furnished", "image", "distance_km",
         "water_cost", "electricity_cost",
         "available_from", "available_to", "semester_label",
+        "latitude", "longitude",
     ]
 
     for field in allowed_fields:

@@ -31,6 +31,9 @@ class Property(db.Model):
 
     verified_host = db.Column(db.Boolean, default=False)
 
+    latitude = db.Column(db.Numeric(10, 7), nullable=True)
+    longitude = db.Column(db.Numeric(10, 7), nullable=True)
+
     water_cost = db.Column(db.Numeric(10, 2), default=0)
     electricity_cost = db.Column(db.Numeric(10, 2), default=0)
 

@@ -39,6 +39,8 @@ export default function AddProperty() {
     distanceKm: "",
     waterCost: "",
     electricityCost: "",
+    latitude: "",
+    longitude: "",
     semesterLabel: "",
     availableFrom: "",
     availableTo: "",
@@ -145,6 +147,8 @@ export default function AddProperty() {
           distance_km: Number(form.distanceKm) || 0,
           water_cost: Number(form.waterCost) || 0,
           electricity_cost: Number(form.electricityCost) || 0,
+          latitude: form.latitude ? Number(form.latitude) : null,
+          longitude: form.longitude ? Number(form.longitude) : null,
           semester_label: form.semesterLabel || null,
           available_from: form.availableFrom || null,
           available_to: form.availableTo || null,
@@ -350,6 +354,29 @@ export default function AddProperty() {
                   value={form.distanceKm}
                   onChange={update("distanceKm")}
                   placeholder="0.8"
+                  className="w-full border border-slate-200 rounded-lg p-3.5"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-ink mb-2">Latitude</label>
+                <input
+                  type="number" step="any"
+                  value={form.latitude}
+                  onChange={update("latitude")}
+                  placeholder="-1.2921"
+                  className="w-full border border-slate-200 rounded-lg p-3.5"
+                />
+                <p className="text-xs text-muted mt-1">Find on Google Maps — right-click your property</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-ink mb-2">Longitude</label>
+                <input
+                  type="number" step="any"
+                  value={form.longitude}
+                  onChange={update("longitude")}
+                  placeholder="36.8219"
                   className="w-full border border-slate-200 rounded-lg p-3.5"
                 />
               </div>
