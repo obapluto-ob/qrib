@@ -39,17 +39,18 @@ export default function Login() {
     window.google.accounts.id.initialize({
       client_id: GOOGLE_CLIENT_ID,
       callback: async (response) => {
-        // First do a quick check if this is a new user by attempting login without role
-        // We'll show role picker only for new users
         setLoading(true);
         try {
-          const result = await googleLogin({ credential: response.credential, role: "__check__" });
+          // Call without role first — backend returns is_new_user flag
+          // without creating account if no role provided
+          const result = await googleLogin({ credential: response.credential });
           setLoading(false);
-          if (result.is_new_user) {
-            // New user — show role picker before creating account
+          if (!result.ok && result.is_new_user) {
+            // New user — show role picker
             setGooglePending({ credential: response.credential });
             setGoogleRole("student");
-          } else if (result.ok) {
+          } else if (result.ok && !result.is_new_user) {
+            // Existing user — logged in, redirect
             showToast("Signed in with Google.", "success");
             navigate(result.user?.role === "host" ? "/host/dashboard" : "/student/dashboard", { replace: true });
           } else {

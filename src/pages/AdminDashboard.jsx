@@ -7,7 +7,7 @@ import { ChevronDown, Search, X, CheckCircle, AlertCircle, Trash2, Check } from 
 const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000/api").replace(/\/$/, "");
 
 export default function AdminDashboard() {
-  const { user, token } = useAuth();
+  const { user, getToken } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -52,7 +52,7 @@ export default function AdminDashboard() {
     try {
       setLoading(true);
       const response = await fetch(`${API_URL}/admin/dashboard/stats`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${getToken()}` },
       });
       if (response.ok) {
         const data = await response.json();
@@ -78,7 +78,7 @@ export default function AdminDashboard() {
       });
       
       const response = await fetch(`${API_URL}/admin/users?${params}`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${getToken()}` },
       });
       if (response.ok) {
         const data = await response.json();
@@ -95,7 +95,7 @@ export default function AdminDashboard() {
     try {
       setLoading(true);
       const response = await fetch(`${API_URL}/admin/properties/moderation?page=${currentPage}&limit=10`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${getToken()}` },
       });
       if (response.ok) {
         const data = await response.json();
@@ -112,7 +112,7 @@ export default function AdminDashboard() {
     try {
       setLoading(true);
       const response = await fetch(`${API_URL}/admin/verifications/pending?page=${currentPage}&limit=10`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${getToken()}` },
       });
       if (response.ok) {
         const data = await response.json();
@@ -130,7 +130,7 @@ export default function AdminDashboard() {
       const response = await fetch(`${API_URL}/admin/properties/${propertyId}/verify`, {
         method: "PATCH",
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${getToken()}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ approved: true }),
@@ -148,7 +148,7 @@ export default function AdminDashboard() {
     try {
       const response = await fetch(`${API_URL}/admin/properties/${propertyId}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${getToken()}` },
       });
       if (response.ok) {
         showToast("Property deleted successfully", "success");
@@ -164,7 +164,7 @@ export default function AdminDashboard() {
       const response = await fetch(`${API_URL}/admin/verifications/${verificationId}/approve`, {
         method: "PATCH",
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${getToken()}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ notes }),
@@ -187,7 +187,7 @@ export default function AdminDashboard() {
       const response = await fetch(`${API_URL}/admin/verifications/${verificationId}/reject`, {
         method: "PATCH",
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${getToken()}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ notes }),
@@ -206,7 +206,7 @@ export default function AdminDashboard() {
     try {
       const response = await fetch(`${API_URL}/admin/users/${userId}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${getToken()}` },
       });
       if (response.ok) {
         showToast("User deleted successfully", "success");

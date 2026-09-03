@@ -8,7 +8,7 @@ import Footer from "../components/Footer";
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
 
 export default function PropertyReviews() {
-  const { user, token } = useAuth();
+  const { user, getToken } = useAuth();
   const { showToast } = useToast();
   const [reviews, setReviews] = useState([]);
   const [ratingStats, setRatingStats] = useState(null);
@@ -34,7 +34,7 @@ export default function PropertyReviews() {
       setLoading(true);
       const response = await fetch(
         `${BACKEND_URL}/api/reviews/property/${id}`,
-        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+        { headers: token ? { Authorization: `Bearer ${getToken()}` } : {} }
       );
       if (response.ok) {
         const data = await response.json();
@@ -55,7 +55,7 @@ export default function PropertyReviews() {
   const handleSubmitReview = async (e) => {
     e.preventDefault();
 
-    if (!token) {
+    if (!getToken()) {
       showToast("Please log in to leave a review", "error");
       return;
     }
@@ -70,7 +70,7 @@ export default function PropertyReviews() {
       const response = await fetch(`${BACKEND_URL}/api/reviews`, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${getToken()}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -101,7 +101,7 @@ export default function PropertyReviews() {
     try {
       const response = await fetch(`${BACKEND_URL}/api/reviews/${reviewId}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${getToken()}` },
       });
 
       if (response.ok) {

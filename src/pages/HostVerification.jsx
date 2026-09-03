@@ -15,7 +15,7 @@ const STEPS = [
 ];
 
 export default function HostVerification() {
-  const { user, token } = useAuth();
+  const { user, getToken } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
 
@@ -32,17 +32,17 @@ export default function HostVerification() {
   });
 
   useEffect(() => {
-    if (!token || user?.role !== "host") {
+    if (!getToken() || user?.role !== "host") {
       setLoading(false);
       return;
     }
     fetchStatus();
-  }, [token, user]);
+  }, [user]);
 
   const fetchStatus = async () => {
     try {
       const res = await fetch(`${API_URL}/host-verification/me`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${getToken()}` },
       });
       if (res.ok) {
         const data = await res.json();

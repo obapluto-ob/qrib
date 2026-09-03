@@ -8,7 +8,7 @@ import Footer from "../components/Footer";
 const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000/api").replace(/\/$/, "");
 
 export default function StudentMessages() {
-  const { user, token } = useAuth();
+  const { user, getToken } = useAuth();
   const { showToast } = useToast();
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
@@ -29,13 +29,13 @@ export default function StudentMessages() {
       }, 5000);
       return () => clearInterval(interval);
     }
-  }, [token, selectedConversation]);
+  }, [getToken(), selectedConversation]);
 
   const fetchConversations = async () => {
     try {
       setLoading(true);
       const response = await fetch(`${API_URL}/messages/conversations`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${getToken()}` },
       });
       if (response.ok) {
         const data = await response.json();
@@ -53,7 +53,7 @@ export default function StudentMessages() {
       const response = await fetch(
         `${API_URL}/messages/user/${partnerId}`,
         {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${getToken()}` },
         }
       );
       if (response.ok) {
@@ -78,7 +78,7 @@ export default function StudentMessages() {
       const response = await fetch(`${API_URL}/messages`, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${getToken()}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({

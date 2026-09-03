@@ -205,45 +205,57 @@ def google_auth():
     email = id_info["email"].lower()
     name = id_info.get("name", email.split("@")[0])
 
+    # Check if user already exists
     user = User.query.filter_by(google_id=google_id).first()
-
     if not user:
         user = User.query.filter_by(email=email).first()
 
-    is_new_user = False
+    # Existing user — log them in immediately
+    if user:
+        user.google_id = google_id
+        user.auth_provider = "google"
+        db.session.commit()
+        access_token = create_access_token(identity=str(user.id))
+        return jsonify({
+            "message": "Google login successful",
+            "access_token": access_token,
+            "user": user_to_dict(user),
+            "is_new_user": False,
+        }), 200
 
-    if not user:
-        # New user — role must be provided by frontend
-        role = data.get("role", "student")
-        if role not in ("student", "host"):
-            role = "student"
+    # New user — require role before creating account
+    role = data.get("role")
+    if not role or role not in ("student", "host"):
+        # No valid role provided — tell frontend to ask
+        return jsonify({
+            "is_new_user": True,
+            "google_id": google_id,
+            "email": email,
+            "name": name,
+        }), 200
 
-        username = email.split("@")[0]
-        if User.query.filter_by(username=username).first():
-            username = f"{username}_{User.query.count() + 1}"
+    # Create new user with chosen role
+    username = email.split("@")[0]
+    if User.query.filter_by(username=username).first():
+        username = f"{username}_{User.query.count() + 1}"
 
-        user = User(
-            username=username,
-            email=email,
-            name=name,
-            role=role,
-            auth_provider="google",
-            google_id=google_id,
-        )
-        db.session.add(user)
-        is_new_user = True
-
-    user.google_id = google_id
-    user.auth_provider = "google"
+    user = User(
+        username=username,
+        email=email,
+        name=name,
+        role=role,
+        auth_provider="google",
+        google_id=google_id,
+    )
+    db.session.add(user)
     db.session.commit()
 
     access_token = create_access_token(identity=str(user.id))
-
     return jsonify({
-        "message": "Google login successful",
+        "message": "Google sign-up successful",
         "access_token": access_token,
         "user": user_to_dict(user),
-        "is_new_user": is_new_user,
+        "is_new_user": True,
     }), 200
 
 

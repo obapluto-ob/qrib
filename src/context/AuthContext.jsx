@@ -151,15 +151,16 @@ export function AuthProvider({ children }) {
       }
 
       if (!data.access_token) {
+        // No token means backend wants role picker (new user)
         return {
           ok: false,
-          message:
-            "Google authentication succeeded but the server did not return a token.",
+          is_new_user: data.is_new_user || false,
+          message: data.is_new_user ? null : "Google authentication succeeded but the server did not return a token.",
         };
       }
 
-      // Only save session if this wasn't a role-check probe
-      if (role !== "__check__") {
+      // Only save session if account was created or user already existed (token present)
+      if (data.access_token) {
         localStorage.setItem(TOKEN_KEY, data.access_token);
         setUser(data.user);
       }
@@ -308,6 +309,8 @@ export function AuthProvider({ children }) {
       value={{
         user,
         ready,
+        token: localStorage.getItem(TOKEN_KEY),
+        getToken: () => localStorage.getItem(TOKEN_KEY),
         login,
         signup,
         googleLogin,
