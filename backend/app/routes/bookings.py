@@ -5,6 +5,12 @@ from flask_jwt_extended import get_jwt_identity, jwt_required
 
 from app.extensions import db
 from app.models import Booking, Message, Notification, Property, User
+from app.services.email import (
+    send_booking_request,
+    send_booking_approved,
+    send_booking_rejected,
+    send_booking_confirmation,
+)
 
 
 bookings_bp = Blueprint(
@@ -72,6 +78,14 @@ def create_booking():
 
     db.session.add(booking)
     db.session.commit()
+
+    # Email host about new booking request
+    host = db.session.get(User, property.host_id)
+    if host:
+        send_booking_request(
+            host.email, host.name, student.name,
+            property.title, str(move_in_date), booking.id
+        )
 
     return jsonify({
         "message": "Booking created successfully",
@@ -217,6 +231,18 @@ def respond_booking(booking_id):
         body=response_message,
     ))
     db.session.commit()
+
+    # Email student about the host's decision
+    student = db.session.get(User, booking.student_id)
+    prop = booking.property
+    if student and prop:
+        if action == "approve":
+            send_booking_approved(
+                student.email, student.name, prop.title,
+                str(booking.move_in_date), booking.id
+            )
+        else:
+            send_booking_rejected(student.email, student.name, prop.title)
 
     return jsonify({"booking": booking_to_dict(booking)}), 200
 

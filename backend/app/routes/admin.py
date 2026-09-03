@@ -7,6 +7,7 @@ import os
 
 from app.extensions import db
 from app.models import User, Property, Booking, Review, Notification, HostVerification, Payment, Message
+from app.services.email import send_verification_approved, send_verification_rejected
 
 admin_bp = Blueprint(
     "admin",
@@ -459,7 +460,12 @@ def approve_verification(verification_id):
     )
     db.session.add(notification)
     db.session.commit()
-    
+
+    # Email host
+    host = db.session.get(User, verification.host_id)
+    if host:
+        send_verification_approved(host.email, host.name)
+
     return jsonify({
         "message": "Verification approved successfully",
         "verification_id": verification_id,
@@ -495,7 +501,12 @@ def reject_verification(verification_id):
     )
     db.session.add(notification)
     db.session.commit()
-    
+
+    # Email host
+    host = db.session.get(User, verification.host_id)
+    if host:
+        send_verification_rejected(host.email, host.name, notes)
+
     return jsonify({
         "message": "Verification rejected successfully",
         "verification_id": verification_id,
