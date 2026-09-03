@@ -25,7 +25,7 @@ export default function HostVerification() {
   const [submitting, setSubmitting] = useState(false);
 
   const [form, setForm] = useState({
-    full_name: "",
+    full_name: user?.name || "",
     phone: "",
     id_number: "",
     document_url: "",
@@ -47,10 +47,12 @@ export default function HostVerification() {
       if (res.ok) {
         const data = await res.json();
         setVerification(data);
-        // Pre-fill form if data exists
-        if (data.id_number) {
-          setForm((f) => ({ ...f, id_number: data.id_number, document_url: data.document_url || "" }));
-        }
+        setForm((f) => ({
+          ...f,
+          full_name: f.full_name || user?.name || "",
+          id_number: data.id_number || f.id_number,
+          document_url: data.document_url || f.document_url,
+        }));
       }
     } catch (err) {
       console.error("Error fetching verification:", err);
@@ -206,12 +208,12 @@ export default function HostVerification() {
       <Navbar />
 
       <main className="mx-auto max-w-xl px-6 py-12">
-        {/* Rejected banner */}
+        {/* Rejected banner — stays visible on all steps */}
         {verification?.status === "rejected" && (
           <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 flex gap-3">
             <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="font-bold text-red-900">Previous submission rejected</p>
+              <p className="font-bold text-red-900">Submission rejected — please fix and resubmit</p>
               <p className="text-sm text-red-700 mt-1">{verification.notes || "Please resubmit with updated information."}</p>
             </div>
           </div>
