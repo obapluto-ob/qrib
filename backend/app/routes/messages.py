@@ -151,6 +151,17 @@ def send_booking_request():
     if host_id == user_id:
         return jsonify({"error": "Cannot book your own property"}), 400
 
+    active_booking = Booking.query.filter(
+        Booking.property_id == property_id,
+        Booking.student_id == user_id,
+        Booking.status.in_(["pending", "negotiating", "approved"]),
+    ).first()
+    if active_booking:
+        return jsonify({
+            "error": "You already have an active booking request for this property",
+            "booking": booking_to_dict(active_booking),
+        }), 409
+
     # Create booking in negotiating state
     booking = Booking(
         property_id=property_id,
@@ -344,6 +355,9 @@ def get_property_messages(property_id):
             "sender_name": msg.sender.name if msg.sender else "Unknown",
             "receiver_id": msg.receiver_id,
             "message": msg.message,
+            "message_type": msg.message_type,
+            "booking_id": msg.booking_id,
+            "property_id": msg.property_id,
             "created_at": msg.created_at.isoformat(),
         })
     

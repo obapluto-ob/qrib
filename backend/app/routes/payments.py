@@ -59,6 +59,12 @@ def initiate_payment():
     if booking.student_id != user_id:
         return jsonify({"error": "You can only pay for your own booking"}), 403
 
+    if booking.status != "approved":
+        return jsonify({
+            "error": "Payment is available only after the host approves the booking",
+            "status": booking.status,
+        }), 409
+
     property_id = booking.property_id
     property = db.session.get(Property, property_id)
     if not property:

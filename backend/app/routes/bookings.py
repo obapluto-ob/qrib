@@ -4,7 +4,7 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
 from app.extensions import db
-from app.models import Booking, Property, User
+from app.models import Booking, Message, Notification, Property, User
 
 
 bookings_bp = Blueprint(
@@ -198,6 +198,24 @@ def respond_booking(booking_id):
         return jsonify({"error": "action must be approve or reject"}), 400
 
     booking.status = "approved" if action == "approve" else "rejected"
+    response_message = (
+        "Your booking request has been approved. Please proceed to payment."
+        if action == "approve"
+        else "Your booking request was not approved at this time."
+    )
+    db.session.add(Message(
+        sender_id=user_id,
+        receiver_id=booking.student_id,
+        message=response_message,
+        message_type="booking_approved" if action == "approve" else "booking_rejected",
+        booking_id=booking.id,
+        property_id=booking.property_id,
+    ))
+    db.session.add(Notification(
+        user_id=booking.student_id,
+        title="Booking request updated",
+        body=response_message,
+    ))
     db.session.commit()
 
     return jsonify({"booking": booking_to_dict(booking)}), 200

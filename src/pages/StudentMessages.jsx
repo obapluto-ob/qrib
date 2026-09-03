@@ -274,17 +274,6 @@ export default function StudentMessages() {
         body: JSON.stringify({ action: "approve" }),
       });
       if (!res.ok) throw new Error();
-      // Send approval message
-      await fetch(`${API_URL}/messages`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${getToken()}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          receiver_id: selectedPartnerId,
-          message: "Your booking request has been approved! Please proceed to payment.",
-          message_type: "booking_approved",
-          booking_id: bookingId,
-        }),
-      });
       showToast("Booking approved!", "success");
       await fetchMessages(selectedPartnerId);
     } catch {
@@ -300,16 +289,6 @@ export default function StudentMessages() {
         body: JSON.stringify({ action: "reject" }),
       });
       if (!res.ok) throw new Error();
-      await fetch(`${API_URL}/messages`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${getToken()}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          receiver_id: selectedPartnerId,
-          message: "Sorry, your booking request was not approved at this time.",
-          message_type: "booking_rejected",
-          booking_id: bookingId,
-        }),
-      });
       showToast("Booking rejected.", "info");
       await fetchMessages(selectedPartnerId);
     } catch {
