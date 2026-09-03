@@ -82,6 +82,60 @@ function LoadingSkeleton() {
       </main>
 
       <Footer />
+
+      {showBookNow && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-extrabold text-slate-900">
+                  Book this accommodation
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Choose your move-in date to continue directly to payment.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowBookNow(false)}
+                className="text-2xl leading-none text-slate-400 hover:text-slate-700"
+                aria-label="Close booking dialog"
+              >
+                &times;
+              </button>
+            </div>
+
+            <label className="mt-6 block text-sm font-bold text-slate-700">
+              Move-in date
+              <input
+                type="date"
+                value={moveInDate}
+                min={new Date().toISOString().split("T")[0]}
+                onChange={(event) => setMoveInDate(event.target.value)}
+                className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
+              />
+            </label>
+
+            <div className="mt-6 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowBookNow(false)}
+                className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={bookingLoading}
+                onClick={handleBookNow}
+                className="flex-1 rounded-xl bg-brand px-4 py-3 text-sm font-bold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {bookingLoading ? "Creating booking..." : "Continue to payment"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -193,7 +247,39 @@ export default function AccommodationDetails() {
     };
   }, [id]);
 
-  const handleBooking = () => {
+  const [showBookNow, setShowBookNow] = useState(false);
+  const [moveInDate, setMoveInDate] = useState("");
+  const [bookingLoading, setBookingLoading] = useState(false);
+
+  const handleBookNow = async () => {
+    if (!user) {
+      showToast("Please log in before booking.", "error");
+      navigate("/login");
+      return;
+    }
+    if (!moveInDate) {
+      showToast("Please select a move-in date.", "error");
+      return;
+    }
+    setBookingLoading(true);
+    try {
+      const token = localStorage.getItem("qrib_access_token");
+      const res = await fetch(`${API_URL}/bookings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ property_id: listing.id, move_in_date: moveInDate }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Booking failed.");
+      navigate(`/payment/${data.booking.id}`);
+    } catch (err) {
+      showToast(err.message, "error");
+    } finally {
+      setBookingLoading(false);
+    }
+  };
+
+  const handleNegotiate = () => {
     if (!user) {
       showToast("Please log in before booking this accommodation.", "error");
       navigate("/login");
@@ -537,22 +623,22 @@ export default function AccommodationDetails() {
 
                 <button
                   type="button"
-                  onClick={handleBooking}
+                  onClick={() => {
+                    if (!user) { showToast("Please log in before booking.", "error"); navigate("/login"); return; }
+                    setShowBookNow(true);
+                  }}
                   className="mt-7 flex w-full items-center justify-center gap-2 rounded-xl bg-brand px-5 py-4 font-extrabold text-white transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2"
                 >
                   <CheckCircle2 className="h-5 w-5" />
-                  Book this accommodation
+                  Book Now
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => {
-                    if (!user) { showToast("Please log in to message the host.", "error"); navigate("/login"); return; }
-                    navigate(`/student/messages?partner=${listing.hostId}&property=${listing.id}`);
-                  }}
+                  onClick={handleNegotiate}
                   className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 font-bold text-slate-700 transition hover:bg-slate-50"
                 >
-                  Message host
+                  Negotiate / Message host
                 </button>
 
                 <p className="mt-4 text-center text-xs leading-5 text-slate-500">

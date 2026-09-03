@@ -67,7 +67,7 @@ def create_booking():
         property_id=property_id,
         student_id=student_id,
         move_in_date=move_in_date,
-        status="pending",
+        status="approved",
     )
 
     db.session.add(booking)
