@@ -1,19 +1,33 @@
 import os
-import resend
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
-FROM = "Qrib <onboarding@resend.dev>"
+FROM_NAME = "Qrib"
+FROM_EMAIL = "b7cbc2001@smtp-brevo.com"
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://qrib-mu.vercel.app")
 BRAND = "#2563EB"
+
+SMTP_HOST = "smtp-relay.brevo.com"
+SMTP_PORT = 587
+SMTP_LOGIN = "b7cbc2001@smtp-brevo.com"
 
 
 def _send(to: str, subject: str, html: str):
     """Returns None on success, error string on failure."""
-    api_key = os.environ.get("RESEND_API_KEY", "")
-    if not api_key:
-        return "RESEND_API_KEY not set"
-    resend.api_key = api_key
+    smtp_key = os.environ.get("BREVO_API_KEY", "")
+    if not smtp_key:
+        return "BREVO_API_KEY not set"
     try:
-        resend.Emails.send({"from": FROM, "to": [to], "subject": subject, "html": html})
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"] = f"{FROM_NAME} <{FROM_EMAIL}>"
+        msg["To"] = to
+        msg.attach(MIMEText(html, "html"))
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+            server.starttls()
+            server.login(SMTP_LOGIN, smtp_key)
+            server.sendmail(FROM_EMAIL, [to], msg.as_string())
         return None
     except Exception as e:
         return str(e)

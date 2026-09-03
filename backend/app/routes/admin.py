@@ -8,8 +8,7 @@ import functools
 
 from app.extensions import db
 from app.models import User, Property, Booking, Review, Notification, HostVerification, Payment, Message
-from app.services.email import send_verification_approved, send_verification_rejected
-import resend
+from app.services.email import send_verification_approved, send_verification_rejected, _send
 
 admin_bp = Blueprint(
     "admin",
@@ -613,13 +612,6 @@ def send_admin_email():
     if not subject or not body_text:
         return jsonify({"error": "Subject and body are required"}), 400
 
-    api_key = os.environ.get("RESEND_API_KEY", "")
-    if not api_key:
-        return jsonify({"error": "Email service not configured"}), 503
-
-    resend.api_key = api_key
-    FROM = "Qrib <onboarding@resend.dev>"
-
     html = f"""
     <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8fafc;padding:40px 16px">
       <div style="max-width:560px;margin:auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08)">
@@ -656,12 +648,12 @@ def send_admin_email():
     failed = 0
     last_error = None
     for email in recipients:
-        try:
-            resend.Emails.send({"from": FROM, "to": [email], "subject": subject, "html": html})
+        err = _send(email, subject, html)
+        if err is None:
             sent += 1
-        except Exception as e:
+        else:
             failed += 1
-            last_error = str(e)
+            last_error = err
 
     return jsonify({"sent": sent, "failed": failed, "total": len(recipients), "error": last_error}), 200
 
