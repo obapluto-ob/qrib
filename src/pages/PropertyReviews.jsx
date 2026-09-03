@@ -27,7 +27,7 @@ export default function PropertyReviews() {
     const id = new URLSearchParams(window.location.search).get("property_id") || 1;
     setPropertyId(id);
     if (id) fetchReviews(id);
-  }, [token]);
+  }, []);
 
   const fetchReviews = async (id) => {
     try {

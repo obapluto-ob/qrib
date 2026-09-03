@@ -25,28 +25,28 @@ export default function AdminDashboard() {
     if (activeTab === "dashboard") {
       fetchStats();
     }
-  }, [activeTab, token]);
+  }, [activeTab]);
 
   // Fetch users based on filters
   useEffect(() => {
     if (activeTab === "users") {
       fetchUsers();
     }
-  }, [activeTab, searchQuery, userRoleFilter, currentPage, token]);
+  }, [activeTab, searchQuery, userRoleFilter, currentPage]);
 
   // Fetch properties
   useEffect(() => {
     if (activeTab === "properties") {
       fetchProperties();
     }
-  }, [activeTab, currentPage, token]);
+  }, [activeTab, currentPage]);
 
   // Fetch verifications
   useEffect(() => {
     if (activeTab === "verifications") {
       fetchVerifications();
     }
-  }, [activeTab, currentPage, token]);
+  }, [activeTab, currentPage]);
 
   const fetchStats = async () => {
     try {

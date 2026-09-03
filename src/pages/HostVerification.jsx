@@ -83,7 +83,7 @@ export default function HostVerification() {
       const res = await fetch(`${API_URL}/host-verification`, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${getToken()}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({

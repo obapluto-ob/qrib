@@ -19,7 +19,7 @@ export default function StudentMessages() {
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    if (token) {
+    if (getToken()) {
       fetchConversations();
       // Polling for new messages every 5 seconds (for demo - would use WebSocket in production)
       const interval = setInterval(() => {
