@@ -240,8 +240,12 @@ export default function AdminDashboard() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to send");
       setEmailResult(data);
-      showToast(`Sent to ${data.sent} recipient${data.sent !== 1 ? "s" : ""}`, "success");
-      setEmailForm({ audience: "all", to_email: "", subject: "", body: "" });
+      if (data.sent > 0) {
+        showToast(`Sent to ${data.sent} recipient${data.sent !== 1 ? "s" : ""}`, "success");
+        setEmailForm({ audience: "all", to_email: "", subject: "", body: "" });
+      } else {
+        showToast(data.error || "All sends failed", "error");
+      }
     } catch (err) {
       showToast(err.message, "error");
     } finally {
@@ -574,9 +578,14 @@ export default function AdminDashboard() {
               </div>
 
               {emailResult && (
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-                  Sent to <strong>{emailResult.sent}</strong> recipient{emailResult.sent !== 1 ? "s" : ""}
-                  {emailResult.failed > 0 && ` · ${emailResult.failed} failed`}
+                <div className={`rounded-xl border px-4 py-3 text-sm ${
+                  emailResult.sent > 0
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                    : "border-red-200 bg-red-50 text-red-800"
+                }`}>
+                  {emailResult.sent > 0
+                    ? <>Sent to <strong>{emailResult.sent}</strong> recipient{emailResult.sent !== 1 ? "s" : ""}{emailResult.failed > 0 && ` · ${emailResult.failed} failed`}</>
+                    : <>Failed: {emailResult.error || "Unknown error"}</>}
                 </div>
               )}
 

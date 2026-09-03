@@ -654,14 +654,16 @@ def send_admin_email():
 
     sent = 0
     failed = 0
+    last_error = None
     for email in recipients:
         try:
             resend.Emails.send({"from": FROM, "to": [email], "subject": subject, "html": html})
             sent += 1
-        except Exception:
+        except Exception as e:
             failed += 1
+            last_error = str(e)
 
-    return jsonify({"sent": sent, "failed": failed, "total": len(recipients)}), 200
+    return jsonify({"sent": sent, "failed": failed, "total": len(recipients), "error": last_error}), 200
 
 
 # ============================================================

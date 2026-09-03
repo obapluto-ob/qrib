@@ -7,14 +7,16 @@ BRAND = "#2563EB"
 
 
 def _send(to: str, subject: str, html: str):
+    """Returns None on success, error string on failure."""
     api_key = os.environ.get("RESEND_API_KEY", "")
     if not api_key:
-        return
+        return "RESEND_API_KEY not set"
     resend.api_key = api_key
     try:
         resend.Emails.send({"from": FROM, "to": [to], "subject": subject, "html": html})
-    except Exception:
-        pass
+        return None
+    except Exception as e:
+        return str(e)
 
 
 def _base(content: str) -> str:
