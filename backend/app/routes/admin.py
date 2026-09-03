@@ -4,12 +4,11 @@ from flask_migrate import upgrade as db_upgrade
 from sqlalchemy import func, desc, text
 from datetime import datetime, timezone
 import os
+import functools
 
 from app.extensions import db
 from app.models import User, Property, Booking, Review, Notification, HostVerification, Payment, Message
 from app.services.email import send_verification_approved, send_verification_rejected
-import resend
-import os as _os
 import resend
 
 admin_bp = Blueprint(
@@ -26,20 +25,16 @@ admin_bp = Blueprint(
 def require_admin():
     """Decorator to ensure user is an admin"""
     def decorator(f):
+        @functools.wraps(f)
         @jwt_required()
         def decorated_function(*args, **kwargs):
             user_id = int(get_jwt_identity())
             user = db.session.get(User, user_id)
-            
             if not user:
                 return jsonify({"error": "User not found"}), 404
-            
             if user.role != "admin":
                 return jsonify({"error": "Admin access required"}), 403
-            
             return f(*args, **kwargs)
-        
-        decorated_function.__name__ = f.__name__
         return decorated_function
     return decorator
 
@@ -618,7 +613,7 @@ def send_admin_email():
     if not subject or not body_text:
         return jsonify({"error": "Subject and body are required"}), 400
 
-    api_key = _os.environ.get("RESEND_API_KEY", "")
+    api_key = os.environ.get("RESEND_API_KEY", "")
     if not api_key:
         return jsonify({"error": "Email service not configured"}), 503
 
