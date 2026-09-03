@@ -46,6 +46,9 @@ function normalizeProperty(property) {
     electricityCost: Number(property.electricity_cost || 0),
     latitude: property.latitude,
     longitude: property.longitude,
+    semesterLabel: property.semester_label || null,
+    availableFrom: property.available_from || null,
+    availableTo: property.available_to || null,
   };
 }
 

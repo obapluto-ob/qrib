@@ -39,6 +39,9 @@ export default function AddProperty() {
     distanceKm: "",
     waterCost: "",
     electricityCost: "",
+    semesterLabel: "",
+    availableFrom: "",
+    availableTo: "",
   });
 
   const [amenities, setAmenities] = useState([]);
@@ -142,6 +145,9 @@ export default function AddProperty() {
           distance_km: Number(form.distanceKm) || 0,
           water_cost: Number(form.waterCost) || 0,
           electricity_cost: Number(form.electricityCost) || 0,
+          semester_label: form.semesterLabel || null,
+          available_from: form.availableFrom || null,
+          available_to: form.availableTo || null,
         }),
       });
 
@@ -460,6 +466,45 @@ export default function AddProperty() {
                   onChange={update("description")}
                   placeholder="Describe the property, security, nearby facilities, transport, rules, etc."
                   className="w-full border border-slate-200 rounded-lg p-3.5 resize-none"
+                />
+              </div>
+            </div>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-bold text-ink">Semester availability</h2>
+            <p className="text-sm text-muted mt-1">Let students know which semester this property is available for.</p>
+            <div className="grid md:grid-cols-3 gap-5 mt-5">
+              <div>
+                <label className="block text-sm font-semibold text-ink mb-2">Semester</label>
+                <select
+                  value={form.semesterLabel}
+                  onChange={update("semesterLabel")}
+                  className="w-full border border-slate-200 rounded-lg p-3.5 bg-white"
+                >
+                  <option value="">Any / Always available</option>
+                  <option value="Semester 1 (Jan – Apr)">Semester 1 (Jan – Apr)</option>
+                  <option value="Semester 2 (May – Aug)">Semester 2 (May – Aug)</option>
+                  <option value="Semester 3 (Sep – Dec)">Semester 3 (Sep – Dec)</option>
+                  <option value="Full Year">Full Year</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-ink mb-2">Available from</label>
+                <input
+                  type="date"
+                  value={form.availableFrom}
+                  onChange={update("availableFrom")}
+                  className="w-full border border-slate-200 rounded-lg p-3.5"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-ink mb-2">Available to</label>
+                <input
+                  type="date"
+                  value={form.availableTo}
+                  onChange={update("availableTo")}
+                  className="w-full border border-slate-200 rounded-lg p-3.5"
                 />
               </div>
             </div>

@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { CalendarDays } from "lucide-react";
 import { getUniversity } from "../data/universities";
 import WalkingTime from "./WalkingTime";
 
@@ -92,10 +93,16 @@ export default function PropertyCard({ listing, affordability }) {
         )}
 
         {listing.type && (
-          <div className="mt-3">
+          <div className="mt-3 flex flex-wrap gap-2">
             <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
               {listing.type}
             </span>
+            {listing.semesterLabel && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
+                <CalendarDays className="h-3 w-3" />
+                {listing.semesterLabel}
+              </span>
+            )}
           </div>
         )}
       </div>

@@ -5,6 +5,7 @@ import {
   Bath,
   BedDouble,
   Building2,
+  CalendarDays,
   CheckCircle2,
   Home,
   MapPin,
@@ -56,6 +57,9 @@ function normalizeProperty(property) {
       : [],
     waterCost: Number(property.water_cost || 0),
     electricityCost: Number(property.electricity_cost || 0),
+    semesterLabel: property.semester_label || null,
+    availableFrom: property.available_from || null,
+    availableTo: property.available_to || null,
   };
 }
 
@@ -660,6 +664,22 @@ export default function AccommodationDetails() {
                     </span>
                   </div>
                 </div>
+
+                {listing.semesterLabel && (
+                  <div className="mt-4 flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3">
+                    <CalendarDays className="h-4 w-4 shrink-0 text-indigo-600" />
+                    <div>
+                      <p className="text-xs font-bold text-indigo-800">{listing.semesterLabel}</p>
+                      {listing.availableFrom && listing.availableTo && (
+                        <p className="text-xs text-indigo-600">
+                          {new Date(listing.availableFrom).toLocaleDateString("en-KE", { day: "numeric", month: "short", year: "numeric" })}
+                          {" – "}
+                          {new Date(listing.availableTo).toLocaleDateString("en-KE", { day: "numeric", month: "short", year: "numeric" })}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 <button
                   type="button"

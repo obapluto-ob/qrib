@@ -34,6 +34,10 @@ class Property(db.Model):
     water_cost = db.Column(db.Numeric(10, 2), default=0)
     electricity_cost = db.Column(db.Numeric(10, 2), default=0)
 
+    available_from = db.Column(db.String(20), nullable=True)
+    available_to = db.Column(db.String(20), nullable=True)
+    semester_label = db.Column(db.String(50), nullable=True)
+
     host_id = db.Column(
         db.Integer,
         db.ForeignKey("users.id"),
