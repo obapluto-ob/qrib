@@ -97,6 +97,7 @@ export default function HostVerification() {
 
       showToast("Verification submitted successfully!", "success");
       await fetchStatus();
+      navigate("/host/verification");
     } catch (err) {
       showToast(err.message || "Submission failed. Please try again.", "error");
     } finally {

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { useAuth } from "../context/useAuth";
@@ -20,6 +20,7 @@ const defaultVerification = {
 export default function HostInfo() {
   const { user } = useAuth();
   const { showToast } = useToast();
+  const navigate = useNavigate();
 
   const savedVerification = (() => {
     try {
@@ -76,7 +77,14 @@ export default function HostInfo() {
     }
 
     localStorage.setItem(HOST_VERIFICATION_KEY, JSON.stringify(form));
-    showToast("Host verification saved. You can now list your property.", "success");
+
+    if (user?.role === "host") {
+      showToast("Details saved! Proceeding to verification.", "success");
+      navigate("/host/verification");
+    } else {
+      showToast("Details saved! Create a host account to continue.", "success");
+      navigate("/login?intent=host");
+    }
   };
 
   const completedFields = [
@@ -109,14 +117,16 @@ export default function HostInfo() {
             Verification progress: {completedFields}/7 required checks complete.
           </div>
 
-          <div className="mt-6 flex gap-3">
-            <Link
-              to="/host/dashboard"
-              className="inline-block bg-brand text-white px-6 py-3 rounded-lg font-bold"
-            >
-              Go to host dashboard
-            </Link>
-          </div>
+          {user?.role === "host" && (
+            <div className="mt-6 flex gap-3">
+              <Link
+                to="/host/dashboard"
+                className="inline-block bg-brand text-white px-6 py-3 rounded-lg font-bold"
+              >
+                Go to host dashboard
+              </Link>
+            </div>
+          )}
         </div>
 
         <form onSubmit={handleSubmit} className="mt-12 grid md:grid-cols-2 gap-6 border border-line rounded-2xl p-6 md:p-8">

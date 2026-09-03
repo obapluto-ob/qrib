@@ -13,14 +13,16 @@ export default function Login() {
 
   const { showToast } = useToast();
 
+  const intent = params.get("intent");
+
   const [mode, setMode] = useState(
-    params.get("mode") === "signup" ? "signup" : "login"
+    params.get("mode") === "signup" || intent === "host" ? "signup" : "login"
   );
 
   const { login, signup, googleLogin, resetPassword } = useAuth();
 
   const [showPassword, setShowPassword] = useState(false);
-  const [role, setRole] = useState("student");
+  const [role, setRole] = useState(intent === "host" ? "host" : "student");
   const [loading, setLoading] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotSent, setForgotSent] = useState(false);
@@ -220,9 +222,12 @@ export default function Login() {
       // -------------------------------------------------------
 
       if (loggedInUser?.role === "host") {
-        navigate("/host/dashboard", {
-          replace: true,
-        });
+        navigate(
+          mode === "signup" || intent === "host"
+            ? "/host/verification"
+            : "/host/dashboard",
+          { replace: true }
+        );
       } else {
         navigate("/student/dashboard", {
           replace: true,
