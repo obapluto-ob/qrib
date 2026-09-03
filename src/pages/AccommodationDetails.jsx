@@ -549,6 +549,17 @@ export default function AccommodationDetails() {
                   Book this accommodation
                 </button>
 
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!user) { showToast("Please log in to message the host.", "error"); navigate("/login"); return; }
+                    navigate(`/student/messages?partner=${listing.hostId}`);
+                  }}
+                  className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 font-bold text-slate-700 transition hover:bg-slate-50"
+                >
+                  Message host
+                </button>
+
                 <p className="mt-4 text-center text-xs leading-5 text-slate-500">
                   You will need to be logged in before you can
                   continue with a booking.
