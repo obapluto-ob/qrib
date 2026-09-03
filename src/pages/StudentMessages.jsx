@@ -204,7 +204,7 @@ export default function StudentMessages() {
   }, [sidebarTab]);
 
   useEffect(() => {
-    if (!selectedPartnerId || !token) return;
+    if (!selectedPartnerId || !getToken()) return;
     fetchMessages(selectedPartnerId);
     pollRef.current = setInterval(() => fetchMessages(selectedPartnerId), 5000);
     return () => clearInterval(pollRef.current);

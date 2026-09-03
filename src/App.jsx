@@ -161,7 +161,7 @@ function App() {
             <Route
               path="/student/messages"
               element={
-                <ProtectedRoute role="student">
+                <ProtectedRoute>
                   <StudentMessages />
                 </ProtectedRoute>
               }
