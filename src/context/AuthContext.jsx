@@ -158,12 +158,16 @@ export function AuthProvider({ children }) {
         };
       }
 
-      localStorage.setItem(TOKEN_KEY, data.access_token);
-      setUser(data.user);
+      // Only save session if this wasn't a role-check probe
+      if (role !== "__check__") {
+        localStorage.setItem(TOKEN_KEY, data.access_token);
+        setUser(data.user);
+      }
 
       return {
         ok: true,
         user: data.user,
+        is_new_user: data.is_new_user || false,
       };
     } catch (error) {
       console.error("Google login error:", error);

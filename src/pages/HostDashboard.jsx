@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { useAuth } from "../context/useAuth";
@@ -7,27 +7,6 @@ import { getUniversity } from "../data/universities";
 
 const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000/api").replace(/\/$/, "");
 const TOKEN_KEY = "qrib_access_token";
-const HOST_VERIFICATION_KEY = "qrib_host_verification";
-
-function getHostVerificationState() {
-  try {
-    const raw = localStorage.getItem(HOST_VERIFICATION_KEY);
-    if (!raw) return null;
-
-    const data = JSON.parse(raw);
-    return {
-      legalName: Boolean(data.legalName && String(data.legalName).trim()),
-      phone: Boolean(data.phone && String(data.phone).trim()),
-      idNumber: Boolean(data.idNumber && String(data.idNumber).trim()),
-      ownershipProof: Boolean(data.ownershipProof && String(data.ownershipProof).trim()),
-      address: Boolean(data.address && String(data.address).trim()),
-      photoUploaded: Boolean(data.photoUploaded),
-      agreed: Boolean(data.agreed),
-    };
-  } catch {
-    return null;
-  }
-}
 
 function normalizeListing(listing) {
   return {
@@ -54,11 +33,9 @@ export default function HostDashboard() {
   const [hostListings, setHostListings] = useState([]);
   const [bookingRequests, setBookingRequests] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [verification, setVerification] = useState(null); // null=loading, object=loaded
 
-  const verificationState = getHostVerificationState();
-  const verificationComplete = verificationState
-    ? Object.values(verificationState).every(Boolean)
-    : false;
+  const verificationComplete = verification?.verified === true;
 
   useEffect(() => {
     if (!user) return;
@@ -67,17 +44,22 @@ export default function HostDashboard() {
       try {
         const token = localStorage.getItem(TOKEN_KEY);
 
-        const [propertiesResponse, bookingsResponse] = await Promise.all([
+        const [propertiesResponse, bookingsResponse, verificationResponse] = await Promise.all([
           fetch(`${API_URL}/properties`, {
             headers: token ? { Authorization: `Bearer ${token}` } : {},
           }),
           fetch(`${API_URL}/bookings`, {
             headers: token ? { Authorization: `Bearer ${token}` } : {},
           }),
+          fetch(`${API_URL}/host-verification/me`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          }),
         ]);
 
         const propertiesData = await propertiesResponse.json();
         const bookingsData = await bookingsResponse.json();
+        const verificationData = verificationResponse.ok ? await verificationResponse.json() : null;
+        setVerification(verificationData || {});
 
         if (!propertiesResponse.ok) {
           throw new Error(propertiesData.error || "Unable to load your listings.");
@@ -156,12 +138,12 @@ export default function HostDashboard() {
             </Link>
 
             <Link
-              to={verificationComplete ? "/host/add-property" : "/host"}
+              to={verificationComplete ? "/host/add-property" : "/host/verification"}
               className={`px-4 py-2 rounded-lg font-bold ${verificationComplete ? "bg-brand text-white hover:opacity-90" : "bg-slate-200 text-slate-500 cursor-not-allowed"}`}
               onClick={(event) => {
                 if (!verificationComplete) {
                   event.preventDefault();
-                  window.location.href = "/host";
+                  window.location.href = "/host/verification";
                 }
               }}
             >
@@ -178,7 +160,7 @@ export default function HostDashboard() {
                 <p className="text-sm mt-1">You must verify your identity, property authority, and listing details before listing on Qrib.</p>
               </div>
 
-              <Link to="/host" className="inline-flex items-center justify-center rounded-lg bg-amber-600 px-4 py-2 text-sm font-bold text-white hover:bg-amber-700">
+              <Link to="/host/verification" className="inline-flex items-center justify-center rounded-lg bg-amber-600 px-4 py-2 text-sm font-bold text-white hover:bg-amber-700">
                 Finish verification
               </Link>
             </div>

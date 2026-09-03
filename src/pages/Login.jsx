@@ -26,6 +26,10 @@ export default function Login() {
   const [forgotSent, setForgotSent] = useState(false);
   const googleBtnRef = useRef(null);
 
+  // Google role picker
+  const [googlePending, setGooglePending] = useState(null); // { credential }
+  const [googleRole, setGoogleRole] = useState("student");
+
   // ---------------------------------------------------------
   // GOOGLE AUTH
   // ---------------------------------------------------------
@@ -35,19 +39,25 @@ export default function Login() {
     window.google.accounts.id.initialize({
       client_id: GOOGLE_CLIENT_ID,
       callback: async (response) => {
+        // First do a quick check if this is a new user by attempting login without role
+        // We'll show role picker only for new users
         setLoading(true);
         try {
-          const result = await googleLogin({ credential: response.credential });
-          if (!result.ok) {
-            showToast(result.message || "Google sign-in failed.", "error");
-            return;
-          }
-          showToast("Signed in with Google.", "success");
-          navigate(result.user?.role === "host" ? "/host/dashboard" : "/student/dashboard", { replace: true });
-        } catch {
-          showToast("Google sign-in failed. Try again.", "error");
-        } finally {
+          const result = await googleLogin({ credential: response.credential, role: "__check__" });
           setLoading(false);
+          if (result.is_new_user) {
+            // New user — show role picker before creating account
+            setGooglePending({ credential: response.credential });
+            setGoogleRole("student");
+          } else if (result.ok) {
+            showToast("Signed in with Google.", "success");
+            navigate(result.user?.role === "host" ? "/host/dashboard" : "/student/dashboard", { replace: true });
+          } else {
+            showToast(result.message || "Google sign-in failed.", "error");
+          }
+        } catch {
+          setLoading(false);
+          showToast("Google sign-in failed. Try again.", "error");
         }
       },
     });
@@ -220,6 +230,7 @@ export default function Login() {
   // ---------------------------------------------------------
 
   return (
+    <>
     <div className="min-h-screen w-full flex bg-white">
 
       {/* =====================================================
@@ -993,5 +1004,99 @@ export default function Login() {
       </div>
 
     </div>
+
+    {/* =====================================================
+        GOOGLE ROLE PICKER MODAL
+    ====================================================== */}
+    {googlePending && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+        <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-2xl">
+          <h2 className="text-2xl font-extrabold text-slate-900">One last step</h2>
+          <p className="mt-2 text-slate-500 text-sm">How will you be using Qrib?</p>
+
+          <div className="mt-6 grid grid-cols-2 gap-3">
+            {["student", "host"].map((r) => (
+              <button
+                key={r}
+                type="button"
+                onClick={() => setGoogleRole(r)}
+                className={`rounded-xl border p-4 text-left transition ${
+                  googleRole === r ? "border-blue-600 bg-blue-50" : "border-slate-200 hover:bg-slate-50"
+                }`}
+              >
+                <p className={`font-bold text-sm ${googleRole === r ? "text-blue-700" : "text-slate-800"}`}>
+                  {r === "student" ? "Student" : "Host"}
+                </p>
+                <p className="mt-1 text-xs text-slate-500">
+                  {r === "student" ? "Find accommodation" : "List your property"}
+                </p>
+                {googleRole === r && (
+                  <span className="mt-2 flex h-5 w-5 items-center justify-center rounded-full bg-blue-600">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+                      <path d="m5 12 4 4L19 6" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          {googleRole === "student" && (
+            <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50 p-4 space-y-2">
+              <p className="text-xs font-bold text-blue-900">As a student you can:</p>
+              <ul className="text-xs text-blue-800 space-y-1 list-disc list-inside">
+                <li>Search & filter accommodation near your campus</li>
+                <li>Save favourite listings</li>
+                <li>Book and pay securely</li>
+                <li>Message hosts directly</li>
+              </ul>
+            </div>
+          )}
+
+          {googleRole === "host" && (
+            <div className="mt-4 rounded-xl border border-amber-100 bg-amber-50 p-4 space-y-2">
+              <p className="text-xs font-bold text-amber-900">As a host you need to:</p>
+              <ul className="text-xs text-amber-800 space-y-1 list-disc list-inside">
+                <li>Complete identity verification (national ID)</li>
+                <li>Submit property documents for review</li>
+                <li>Once approved, list unlimited properties</li>
+              </ul>
+            </div>
+          )}
+
+          <button
+            type="button"
+            disabled={loading}
+            onClick={async () => {
+              setLoading(true);
+              try {
+                const result = await googleLogin({ credential: googlePending.credential, role: googleRole });
+                if (!result.ok) { showToast(result.message || "Google sign-in failed.", "error"); return; }
+                setGooglePending(null);
+                showToast("Account created with Google.", "success");
+                navigate(googleRole === "host" ? "/host/dashboard" : "/student/dashboard", { replace: true });
+              } catch {
+                showToast("Google sign-in failed. Try again.", "error");
+              } finally {
+                setLoading(false);
+              }
+            }}
+            className="mt-6 w-full rounded-xl bg-blue-600 py-3.5 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            {loading ? "Creating account..." : `Continue as ${googleRole}`}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setGooglePending(null)}
+            className="mt-3 w-full text-sm text-slate-400 hover:text-slate-600"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    )}
+
+    </>
   );
 }

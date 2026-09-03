@@ -210,7 +210,14 @@ def google_auth():
     if not user:
         user = User.query.filter_by(email=email).first()
 
+    is_new_user = False
+
     if not user:
+        # New user — role must be provided by frontend
+        role = data.get("role", "student")
+        if role not in ("student", "host"):
+            role = "student"
+
         username = email.split("@")[0]
         if User.query.filter_by(username=username).first():
             username = f"{username}_{User.query.count() + 1}"
@@ -219,11 +226,12 @@ def google_auth():
             username=username,
             email=email,
             name=name,
-            role="student",
+            role=role,
             auth_provider="google",
             google_id=google_id,
         )
         db.session.add(user)
+        is_new_user = True
 
     user.google_id = google_id
     user.auth_provider = "google"
@@ -234,8 +242,39 @@ def google_auth():
     return jsonify({
         "message": "Google login successful",
         "access_token": access_token,
-        "user": user_to_dict(user)
+        "user": user_to_dict(user),
+        "is_new_user": is_new_user,
     }), 200
+
+
+# =========================
+# RESET PASSWORD
+# =========================
+@auth_bp.post("/reset-password")
+def reset_password():
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Request body is required"}), 400
+
+    email = data.get("email", "").strip().lower()
+    new_password = data.get("new_password")
+
+    if not email:
+        return jsonify({"error": "Email is required"}), 400
+
+    user = User.query.filter_by(email=email).first()
+
+    # Always return 200 to avoid email enumeration
+    if not user:
+        return jsonify({"message": "If that email exists, a reset link has been sent."}), 200
+
+    if not new_password or len(new_password) < 6:
+        # No new password provided — just acknowledge (email flow)
+        return jsonify({"message": "If that email exists, a reset link has been sent."}), 200
+
+    user.hashed_password = generate_password_hash(new_password)
+    db.session.commit()
+    return jsonify({"message": "Password updated successfully."}), 200
 
 
 # =========================
