@@ -87,8 +87,11 @@ export default function PropertyCard({ listing, affordability }) {
         </p>
 
         {affordability && (
-          <span className={`mt-2 inline-block rounded-full px-3 py-1 text-xs font-bold ${affordability.color}`}>
-            {affordability.emoji} {affordability.label}
+          <span className={`mt-2 inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold ${affordability.color}`}>
+            {affordability.icon === "check" && <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="m5 12 4 4L19 6" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+            {affordability.icon === "warn" && <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+            {affordability.icon === "over" && <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M18 6 6 18M6 6l12 12" strokeLinecap="round"/></svg>}
+            {affordability.label}
           </span>
         )}
 

@@ -3,8 +3,8 @@ services:
     name: qrib-api
     runtime: python
     rootDir: backend
-    buildCommand: pip install -r requirements.txt && flask db upgrade
-    startCommand: gunicorn run:app
+    buildCommand: pip install -r requirements.txt
+    startCommand: flask db upgrade && gunicorn run:app
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.3

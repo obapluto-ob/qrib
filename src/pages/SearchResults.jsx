@@ -55,9 +55,9 @@ function normalizeProperty(property) {
 function getAffordability(trueCost, budget) {
   if (!budget || budget <= 0) return null;
   const ratio = trueCost / budget;
-  if (ratio <= 0.3) return { label: "Affordable", color: "bg-green-100 text-green-700", emoji: "✅" };
-  if (ratio <= 0.5) return { label: "Stretching", color: "bg-yellow-100 text-yellow-700", emoji: "⚠️" };
-  return { label: "Over budget", color: "bg-red-100 text-red-700", emoji: "🔴" };
+  if (ratio <= 0.3) return { label: "Affordable", color: "bg-green-100 text-green-700", icon: "check" };
+  if (ratio <= 0.5) return { label: "Stretching", color: "bg-yellow-100 text-yellow-700", icon: "warn" };
+  return { label: "Over budget", color: "bg-red-100 text-red-700", icon: "over" };
 }
 
 export default function SearchResults() {
@@ -288,7 +288,7 @@ export default function SearchResults() {
           </p>
 
           <div className="mt-5 flex items-center gap-3 rounded-2xl border border-blue-200 bg-blue-50 px-5 py-4">
-            <span className="text-lg">💰</span>
+            <svg className="h-5 w-5 text-blue-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2" strokeLinecap="round"/></svg>
             <div className="flex flex-1 flex-wrap items-center gap-3">
               <label className="text-sm font-bold text-blue-800 whitespace-nowrap">
                 My monthly budget (KSh)
@@ -303,7 +303,7 @@ export default function SearchResults() {
               />
               {monthlyBudget > 0 && (
                 <span className="text-xs text-blue-600 font-medium">
-                  Properties are sorted by affordability. ✅ ≤30% · ⚠️ 30–50% · 🔴 &gt;50% of your budget
+                  Properties are sorted by affordability. Green ≤30% · Yellow 30–50% · Red &gt;50% of your budget
                 </span>
               )}
             </div>

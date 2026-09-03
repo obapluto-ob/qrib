@@ -187,6 +187,20 @@ export default function HostDashboard() {
           </div>
         </div>
 
+        {verificationComplete && hostListings.length === 0 && !loading && (
+          <div className="mt-8 rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+            <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="font-bold text-emerald-900">Your account is verified — time to list your first property.</p>
+                <p className="text-sm text-emerald-700 mt-1">Your host account is approved. Add a property so students can find and book your accommodation.</p>
+              </div>
+              <Link to="/host/add-property" className="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700 whitespace-nowrap">
+                + Add your first property
+              </Link>
+            </div>
+          </div>
+        )}
+
         {!verificationComplete && (
           <div className={`mt-8 rounded-2xl border p-5 ${verificationPending ? "border-blue-200 bg-blue-50 text-blue-900" : verificationRejected ? "border-red-200 bg-red-50 text-red-900" : "border-amber-200 bg-amber-50 text-amber-900"}`}>
             <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
