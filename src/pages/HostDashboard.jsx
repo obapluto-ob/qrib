@@ -39,6 +39,15 @@ export default function HostDashboard() {
   const [verification, setVerification] = useState(null); // null=loading, object=loaded
 
   const verificationComplete = verification?.verified === true;
+  const verificationPending = verification?.status === "pending";
+  const verificationRejected = verification?.status === "rejected";
+  const verificationLabel = verificationComplete
+    ? "Verified"
+    : verificationPending
+      ? "Under review"
+      : verificationRejected
+        ? "Action required"
+        : "Not submitted";
 
   useEffect(() => {
     if (!user) return;
@@ -159,30 +168,53 @@ export default function HostDashboard() {
 
             <Link
               to={verificationComplete ? "/host/add-property" : "/host/verification"}
-              className={`px-4 py-2 rounded-lg font-bold ${verificationComplete ? "bg-brand text-white hover:opacity-90" : "bg-slate-200 text-slate-500 cursor-not-allowed"}`}
+              className={`px-4 py-2 rounded-lg font-bold ${verificationComplete ? "bg-brand text-white hover:opacity-90" : "bg-slate-200 text-slate-700 hover:bg-slate-300"}`}
               onClick={(event) => {
                 if (!verificationComplete) {
                   event.preventDefault();
-                  window.location.href = "/host/verification";
+                  navigate("/host/verification");
                 }
               }}
             >
-              {verificationComplete ? "+ Add property" : "Complete verification"}
+              {verificationComplete
+                ? "+ Add property"
+                : verificationPending
+                  ? "View verification status"
+                  : verificationRejected
+                    ? "Resubmit verification"
+                    : "Complete verification"}
             </Link>
           </div>
         </div>
 
         {!verificationComplete && (
-          <div className="mt-8 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-900">
+          <div className={`mt-8 rounded-2xl border p-5 ${verificationPending ? "border-blue-200 bg-blue-50 text-blue-900" : verificationRejected ? "border-red-200 bg-red-50 text-red-900" : "border-amber-200 bg-amber-50 text-amber-900"}`}>
             <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
               <div>
-                <p className="font-bold">Complete host verification to publish a property</p>
-                <p className="text-sm mt-1">You must verify your identity, property authority, and listing details before listing on Qrib.</p>
+                <p className="font-bold">
+                  {verificationPending
+                    ? "Your verification is under review"
+                    : verificationRejected
+                      ? "Your verification needs an update"
+                      : "Complete host verification to publish a property"}
+                </p>
+                <p className="text-sm mt-1">
+                  {verificationPending
+                    ? "Our team is reviewing your documents. You can list properties once your verification is approved."
+                    : verificationRejected
+                      ? verification.notes || "Review the feedback and resubmit your verification."
+                      : "You must verify your identity, property authority, and listing details before listing on Qrib."}
+                </p>
               </div>
 
-              <Link to="/host/verification" className="inline-flex items-center justify-center rounded-lg bg-amber-600 px-4 py-2 text-sm font-bold text-white hover:bg-amber-700">
-                Finish verification
-              </Link>
+              <div className="flex items-center gap-3">
+                <span className="rounded-full bg-white/70 px-3 py-1.5 text-xs font-bold">{verificationLabel}</span>
+                {!verificationPending && (
+                  <Link to="/host/verification" className="inline-flex items-center justify-center rounded-lg bg-amber-600 px-4 py-2 text-sm font-bold text-white hover:bg-amber-700">
+                    {verificationRejected ? "Review and resubmit" : "Start verification"}
+                  </Link>
+                )}
+              </div>
             </div>
           </div>
         )}
