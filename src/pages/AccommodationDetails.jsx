@@ -83,6 +83,42 @@ function LoadingSkeleton() {
 
       <Footer />
 
+    </div>
+  );
+}
+
+function ErrorState({ error }) {
+  return (
+    <div className="min-h-screen bg-white">
+      <Navbar />
+
+      <main className="mx-auto flex min-h-[65vh] max-w-4xl items-center justify-center px-6 py-20">
+        <div className="w-full rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
+            <Home className="h-8 w-8 text-slate-500" />
+          </div>
+
+          <h1 className="mt-6 text-3xl font-extrabold text-slate-900">
+            Property not found
+          </h1>
+
+          <p className="mx-auto mt-3 max-w-lg text-slate-500">
+            {error ||
+              "This accommodation could not be found or is no longer available."}
+          </p>
+
+          <Link
+            to="/search"
+            className="mt-7 inline-flex items-center gap-2 rounded-xl bg-brand px-6 py-3 font-bold text-white transition hover:opacity-90"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Browse properties
+          </Link>
+        </div>
+      </main>
+
+      <Footer />
+
       {showBookNow && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
@@ -136,41 +172,6 @@ function LoadingSkeleton() {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function ErrorState({ error }) {
-  return (
-    <div className="min-h-screen bg-white">
-      <Navbar />
-
-      <main className="mx-auto flex min-h-[65vh] max-w-4xl items-center justify-center px-6 py-20">
-        <div className="w-full rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
-            <Home className="h-8 w-8 text-slate-500" />
-          </div>
-
-          <h1 className="mt-6 text-3xl font-extrabold text-slate-900">
-            Property not found
-          </h1>
-
-          <p className="mx-auto mt-3 max-w-lg text-slate-500">
-            {error ||
-              "This accommodation could not be found or is no longer available."}
-          </p>
-
-          <Link
-            to="/search"
-            className="mt-7 inline-flex items-center gap-2 rounded-xl bg-brand px-6 py-3 font-bold text-white transition hover:opacity-90"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Browse properties
-          </Link>
-        </div>
-      </main>
-
-      <Footer />
     </div>
   );
 }
