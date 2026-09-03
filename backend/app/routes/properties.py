@@ -1,4 +1,7 @@
-from flask import Blueprint, request, jsonify
+import base64
+import binascii
+
+from flask import Blueprint, Response, jsonify, request, url_for
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy import func
 
@@ -18,6 +21,10 @@ properties_bp = Blueprint(
 # ============================================================
 
 def property_to_dict(property):
+    image = property.image or ""
+    if image.startswith("data:image/"):
+        image = url_for("properties.get_property_image", property_id=property.id, _external=True)
+
     return {
         "id": property.id,
         "title": property.title,
@@ -29,7 +36,7 @@ def property_to_dict(property):
         "bedrooms": property.bedrooms,
         "bathrooms": property.bathrooms,
         "furnished": property.furnished,
-        "image": property.image if property.image and not property.image.startswith("data:image") else "",
+        "image": image,
         "distance_km": float(property.distance_km or 0),
         "rating": float(property.rating or 0),
         "verified_host": property.verified_host,
@@ -219,6 +226,28 @@ def get_property(property_id):
     return jsonify({
         "property": property_to_dict(property)
     }), 200
+
+
+@properties_bp.get("/<int:property_id>/image")
+def get_property_image(property_id):
+    property = db.session.get(Property, property_id)
+
+    if not property or not property.image or not property.image.startswith("data:image/"):
+        return jsonify({"error": "Property image not found"}), 404
+
+    header, encoded_image = property.image.split(",", 1)
+    try:
+        image_bytes = base64.b64decode(encoded_image, validate=True)
+    except (ValueError, binascii.Error):
+        return jsonify({"error": "Property image is invalid"}), 422
+
+    media_type = header[5:].split(";", 1)[0]
+    if media_type not in {"image/jpeg", "image/png", "image/gif", "image/webp"}:
+        return jsonify({"error": "Unsupported property image type"}), 415
+
+    response = Response(image_bytes, mimetype=media_type)
+    response.headers["Cache-Control"] = "public, max-age=86400"
+    return response
 
 
 # ============================================================
