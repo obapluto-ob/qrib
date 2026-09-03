@@ -131,7 +131,7 @@ export default function StudentMessages() {
 
   const messagesEndRef = useRef(null);
   const pollRef = useRef(null);
-  const token = localStorage.getItem(TOKEN_KEY);
+  const getToken = () => localStorage.getItem(TOKEN_KEY);
 
   // Auto-open from ?partner= and ?property= URL params
   useEffect(() => {
@@ -147,11 +147,11 @@ export default function StudentMessages() {
   }, [searchParams]);
 
   const fetchConversations = useCallback(async () => {
-    if (!token) return;
+    if (!getToken()) return;
     try {
       setLoadingConvs(true);
       const res = await fetch(`${API_URL}/messages/conversations`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${getToken()}` },
       });
       if (res.ok) {
         const data = await res.json();
@@ -162,14 +162,14 @@ export default function StudentMessages() {
     } finally {
       setLoadingConvs(false);
     }
-  }, [token]);
+  }, []);
 
   const fetchMessages = useCallback(async (partnerId) => {
-    if (!token) return;
+    if (!getToken()) return;
     try {
       setLoadingMsgs(true);
       const res = await fetch(`${API_URL}/messages/user/${partnerId}`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${getToken()}` },
       });
       if (res.ok) {
         const data = await res.json();
@@ -180,7 +180,7 @@ export default function StudentMessages() {
     } finally {
       setLoadingMsgs(false);
     }
-  }, [token]);
+  }, []);
 
   const fetchProperties = useCallback(async () => {
     setLoadingProps(true);
@@ -208,7 +208,7 @@ export default function StudentMessages() {
     fetchMessages(selectedPartnerId);
     pollRef.current = setInterval(() => fetchMessages(selectedPartnerId), 5000);
     return () => clearInterval(pollRef.current);
-  }, [selectedPartnerId, token]);
+  }, [selectedPartnerId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -221,7 +221,7 @@ export default function StudentMessages() {
     try {
       const res = await fetch(`${API_URL}/messages`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        headers: { Authorization: `Bearer ${getToken()}`, "Content-Type": "application/json" },
         body: JSON.stringify({ receiver_id: selectedPartnerId, message: messageText.trim() }),
       });
       if (res.ok) {
@@ -245,7 +245,7 @@ export default function StudentMessages() {
     try {
       const res = await fetch(`${API_URL}/messages/booking-request`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        headers: { Authorization: `Bearer ${getToken()}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           property_id: selectedProperty.id,
           move_in_date: moveInDate,
@@ -270,14 +270,14 @@ export default function StudentMessages() {
     try {
       const res = await fetch(`${API_URL}/bookings/${bookingId}/respond`, {
         method: "PATCH",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        headers: { Authorization: `Bearer ${getToken()}`, "Content-Type": "application/json" },
         body: JSON.stringify({ action: "approve" }),
       });
       if (!res.ok) throw new Error();
       // Send approval message
       await fetch(`${API_URL}/messages`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        headers: { Authorization: `Bearer ${getToken()}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           receiver_id: selectedPartnerId,
           message: "Your booking request has been approved! Please proceed to payment.",
@@ -296,13 +296,13 @@ export default function StudentMessages() {
     try {
       const res = await fetch(`${API_URL}/bookings/${bookingId}/respond`, {
         method: "PATCH",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        headers: { Authorization: `Bearer ${getToken()}`, "Content-Type": "application/json" },
         body: JSON.stringify({ action: "reject" }),
       });
       if (!res.ok) throw new Error();
       await fetch(`${API_URL}/messages`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        headers: { Authorization: `Bearer ${getToken()}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           receiver_id: selectedPartnerId,
           message: "Sorry, your booking request was not approved at this time.",
