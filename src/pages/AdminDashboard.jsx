@@ -19,6 +19,9 @@ export default function AdminDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [userRoleFilter, setUserRoleFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [emailForm, setEmailForm] = useState({ audience: "all", to_email: "", subject: "", body: "" });
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailResult, setEmailResult] = useState(null);
 
   // Fetch dashboard stats
   useEffect(() => {
@@ -217,6 +220,35 @@ export default function AdminDashboard() {
     }
   };
 
+  const sendEmail = async () => {
+    if (!emailForm.subject || !emailForm.body) {
+      showToast("Subject and body are required", "error");
+      return;
+    }
+    if (emailForm.audience === "one" && !emailForm.to_email) {
+      showToast("Please enter a recipient email", "error");
+      return;
+    }
+    setEmailSending(true);
+    setEmailResult(null);
+    try {
+      const res = await fetch(`${API_URL}/admin/send-email`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${getToken()}`, "Content-Type": "application/json" },
+        body: JSON.stringify(emailForm),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to send");
+      setEmailResult(data);
+      showToast(`Sent to ${data.sent} recipient${data.sent !== 1 ? "s" : ""}`, "success");
+      setEmailForm({ audience: "all", to_email: "", subject: "", body: "" });
+    } catch (err) {
+      showToast(err.message, "error");
+    } finally {
+      setEmailSending(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       {/* Header */}
@@ -255,6 +287,7 @@ export default function AdminDashboard() {
             { id: "users", label: "Users" },
             { id: "properties", label: "Properties" },
             { id: "verifications", label: "Verifications" },
+            { id: "emails", label: "Send Emails" },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -478,6 +511,82 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Emails Tab */}
+        {activeTab === "emails" && (
+          <div className="max-w-2xl space-y-6">
+            <div>
+              <h2 className="text-xl font-black text-slate-900">Send Email</h2>
+              <p className="mt-1 text-sm text-slate-500">Compose and send emails to users via Resend.</p>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 space-y-5">
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Audience</label>
+                <select
+                  value={emailForm.audience}
+                  onChange={(e) => setEmailForm((f) => ({ ...f, audience: e.target.value, to_email: "" }))}
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-blue-500"
+                >
+                  <option value="all">Everyone (students + hosts)</option>
+                  <option value="students">All students</option>
+                  <option value="hosts">All hosts</option>
+                  <option value="one">Single recipient</option>
+                </select>
+              </div>
+
+              {emailForm.audience === "one" && (
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Recipient email</label>
+                  <input
+                    type="email"
+                    value={emailForm.to_email}
+                    onChange={(e) => setEmailForm((f) => ({ ...f, to_email: e.target.value }))}
+                    placeholder="student@example.com"
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Subject</label>
+                <input
+                  type="text"
+                  value={emailForm.subject}
+                  onChange={(e) => setEmailForm((f) => ({ ...f, subject: e.target.value }))}
+                  placeholder="Important update from Qrib"
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Message</label>
+                <textarea
+                  rows={8}
+                  value={emailForm.body}
+                  onChange={(e) => setEmailForm((f) => ({ ...f, body: e.target.value }))}
+                  placeholder="Write your message here..."
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500 resize-none"
+                />
+              </div>
+
+              {emailResult && (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                  Sent to <strong>{emailResult.sent}</strong> recipient{emailResult.sent !== 1 ? "s" : ""}
+                  {emailResult.failed > 0 && ` · ${emailResult.failed} failed`}
+                </div>
+              )}
+
+              <button
+                onClick={sendEmail}
+                disabled={emailSending}
+                className="w-full rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {emailSending ? "Sending..." : "Send Email"}
+              </button>
             </div>
           </div>
         )}

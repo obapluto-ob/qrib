@@ -122,6 +122,24 @@ export default function StudentDashboard() {
   const [savedIds, setSavedIds] =
     useState(loadSavedListings);
 
+  const [bookings, setBookings] = useState([]);
+  const [unreadMessages, setUnreadMessages] = useState(0);
+
+  // Fetch real bookings and unread message count
+  useEffect(() => {
+    if (!user) return;
+    const token = localStorage.getItem(TOKEN_KEY);
+    const headers = { Authorization: `Bearer ${token}` };
+    fetch(`${API_URL}/bookings`, { headers })
+      .then((r) => r.json())
+      .then((d) => setBookings(Array.isArray(d) ? d : []))
+      .catch(() => {});
+    fetch(`${API_URL}/notifications/unread-count`, { headers })
+      .then((r) => r.json())
+      .then((d) => setUnreadMessages(d.count || 0))
+      .catch(() => {});
+  }, [user]);
+
   /* =======================================================
      LOAD REAL PROPERTIES FROM FLASK API
   ======================================================= */
@@ -663,22 +681,22 @@ export default function StudentDashboard() {
             <DashboardStat
               icon={<DocumentIcon />}
               label="Applications"
-              value="0"
+              value={bookings.length}
               description="Accommodation requests"
             />
 
             <DashboardStat
               icon={<CalendarIcon />}
               label="Upcoming stays"
-              value="0"
+              value={bookings.filter((b) => b.status === "approved").length}
               description="Confirmed bookings"
             />
 
             <DashboardStat
               icon={<MessageIcon />}
-              label="Messages"
-              value="0"
-              description="Unread conversations"
+              label="Notifications"
+              value={unreadMessages}
+              description="Unread notifications"
             />
           </section>
 
@@ -856,6 +874,48 @@ export default function StudentDashboard() {
 
             <aside className="space-y-6">
 
+              {/* BOOKINGS TIMELINE */}
+              {bookings.length > 0 && (
+                <section className="rounded-2xl border border-slate-200 bg-white p-6">
+                  <h3 className="font-black text-slate-900">My Bookings</h3>
+                  <div className="mt-4 space-y-3">
+                    {bookings.slice(0, 4).map((b) => {
+                      const statusConfig = {
+                        pending:    { color: "bg-amber-100 text-amber-700",  label: "Pending" },
+                        approved:   { color: "bg-blue-100 text-blue-700",    label: "Approved" },
+                        rejected:   { color: "bg-red-100 text-red-700",      label: "Rejected" },
+                        cancelled:  { color: "bg-slate-100 text-slate-500",  label: "Cancelled" },
+                        completed:  { color: "bg-emerald-100 text-emerald-700", label: "Completed" },
+                      };
+                      const cfg = statusConfig[b.status] || statusConfig.pending;
+                      const daysUntil = b.move_in_date
+                        ? Math.ceil((new Date(b.move_in_date) - new Date()) / 86400000)
+                        : null;
+                      return (
+                        <div key={b.id} className="flex items-start gap-3 rounded-xl border border-slate-100 p-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-bold text-slate-800 truncate">{b.property_title || "Property"}</p>
+                            {b.move_in_date && (
+                              <p className="text-xs text-slate-500 mt-0.5">
+                                Move-in: {new Date(b.move_in_date).toLocaleDateString("en-KE", { day: "numeric", month: "short", year: "numeric" })}
+                                {daysUntil > 0 && daysUntil <= 30 && (
+                                  <span className="ml-1 font-bold text-blue-600">· {daysUntil}d away</span>
+                                )}
+                              </p>
+                            )}
+                          </div>
+                          <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-bold ${cfg.color}`}>
+                            {cfg.label}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {bookings.length > 4 && (
+                    <p className="mt-3 text-xs text-slate-400 text-center">{bookings.length - 4} more booking{bookings.length - 4 !== 1 ? "s" : ""}</p>
+                  )}
+                </section>
+              )}
               {/* PROFILE */}
 
               <section className="rounded-2xl border border-slate-200 bg-white p-6">
