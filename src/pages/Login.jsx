@@ -10,7 +10,7 @@ export default function Login() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
 
-  const { login, signup } = useAuth();
+  const { login, signup, googleLogin } = useAuth();
   const { showToast } = useToast();
 
   const [mode, setMode] = useState(
@@ -33,19 +33,13 @@ export default function Login() {
       callback: async (response) => {
         setLoading(true);
         try {
-          const res = await fetch(`${API_URL}/auth/google`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ credential: response.credential }),
-          });
-          const data = await res.json();
-          if (!res.ok) {
-            showToast(data.error || "Google sign-in failed.", "error");
+          const result = await googleLogin({ credential: response.credential });
+          if (!result.ok) {
+            showToast(result.message || "Google sign-in failed.", "error");
             return;
           }
-          localStorage.setItem("qrib_access_token", data.access_token);
           showToast("Signed in with Google.", "success");
-          navigate(data.user?.role === "host" ? "/host/dashboard" : "/student/dashboard", { replace: true });
+          navigate(result.user?.role === "host" ? "/host/dashboard" : "/student/dashboard", { replace: true });
         } catch {
           showToast("Google sign-in failed. Try again.", "error");
         } finally {
