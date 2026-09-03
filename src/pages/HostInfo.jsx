@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
@@ -23,10 +24,13 @@ export default function HostInfo() {
   const navigate = useNavigate();
 
   // Hosts already have an account — send them where they need to go
-  if (user?.role === "host") {
-    navigate("/host/dashboard", { replace: true });
-    return null;
-  }
+  useEffect(() => {
+    if (user?.role === "host") {
+      navigate("/host/dashboard", { replace: true });
+    }
+  }, [user, navigate]);
+
+  if (user?.role === "host") return null;
 
   const savedVerification = (() => {
     try {
