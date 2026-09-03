@@ -196,13 +196,25 @@ def create_app():
             response.headers["Access-Control-Allow-Origin"] = origin
             response.headers["Access-Control-Allow-Credentials"] = "true"
             response.headers["Vary"] = "Origin"
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
 
             if request.method == "OPTIONS":
-                response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-                response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
                 response.headers["Access-Control-Max-Age"] = "600"
 
         return response
+
+    @app.errorhandler(Exception)
+    def handle_exception(e):
+        from flask import jsonify as _jsonify
+        import traceback
+        origin = request.headers.get("Origin")
+        resp = _jsonify({"error": str(e), "trace": traceback.format_exc()})
+        resp.status_code = 500
+        if origin and is_allowed_origin(origin):
+            resp.headers["Access-Control-Allow-Origin"] = origin
+            resp.headers["Access-Control-Allow-Credentials"] = "true"
+        return resp
 
     @app.route("/api/<path:subpath>", methods=["OPTIONS"])
     def api_preflight(subpath):
