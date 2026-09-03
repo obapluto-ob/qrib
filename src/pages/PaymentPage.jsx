@@ -4,6 +4,7 @@ import Footer from "../components/Footer";
 import Navbar from "../components/Navbar";
 import { useAuth } from "../context/useAuth";
 import { useToast } from "../context/useToast";
+import { Smartphone } from "lucide-react";
 
 const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000/api").replace(/\/$/, "");
 const TOKEN_KEY = "qrib_access_token";
@@ -20,7 +21,8 @@ export default function PaymentPage() {
   const [paying, setPaying] = useState(false);
   const [paid, setPaid] = useState(false);
   const [error, setError] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("card");
+  const [paymentMethod, setPaymentMethod] = useState("mpesa");
+  const [phone, setPhone] = useState("");
 
   useEffect(() => {
     if (!bookingId) {
@@ -72,8 +74,11 @@ export default function PaymentPage() {
     setPaying(true);
 
     try {
-      // Initiate payment record on backend
-      const initRes = await fetch(`${API_URL}/payments/initiate`, {
+      if (!/^((\+?254)|0)?[17]\d{8}$/.test(phone.replace(/\s|-/g, ""))) {
+        throw new Error("Enter a valid Kenyan M-Pesa number, for example 0712345678.");
+      }
+
+      const initRes = await fetch(`${API_URL}/payments/mpesa/stk-push`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -81,8 +86,7 @@ export default function PaymentPage() {
         },
         body: JSON.stringify({
           booking_id: Number(bookingId),
-          amount,
-          currency: "KES",
+          phone,
         }),
       });
 
@@ -90,28 +94,24 @@ export default function PaymentPage() {
       if (!initRes.ok) throw new Error(initData.error || "Payment initiation failed.");
 
       const paymentId = initData.payment?.id;
-
-      // Simulate processing delay
-      await new Promise((r) => setTimeout(r, 2000));
-
-      // Mark payment as successful
-      if (paymentId) {
-        await fetch(`${API_URL}/payments/${paymentId}/status`, {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            status: "successful",
-            transaction_id: `TXN-${Date.now()}`,
-            gateway_response: "Sandbox payment completed",
-          }),
+      showToast("M-Pesa prompt sent. Enter your PIN on your phone.", "success");
+      for (let attempt = 0; attempt < 20; attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+        const statusRes = await fetch(`${API_URL}/payments/${paymentId}`, {
+          headers: { Authorization: `Bearer ${token}` },
         });
+        const statusData = await statusRes.json();
+        const status = statusData.payment?.status;
+        if (status === "successful") {
+          setPaid(true);
+          showToast("M-Pesa payment successful.", "success");
+          return;
+        }
+        if (status === "failed" || status === "cancelled") {
+          throw new Error(statusData.payment?.gateway_response || "M-Pesa payment was not completed.");
+        }
       }
-
-      setPaid(true);
-      showToast("Payment successful!", "success");
+      throw new Error("Payment is still pending. Check your M-Pesa phone and try again later.");
     } catch (err) {
       showToast(err.message || "Payment failed. Please try again.", "error");
     } finally {
@@ -225,11 +225,7 @@ export default function PaymentPage() {
             <div className="mt-6">
               <p className="text-sm font-bold text-slate-900 mb-3">Payment method</p>
               <div className="grid grid-cols-3 gap-3">
-                {[
-                  { id: "card", label: "Card", icon: "💳" },
-                  { id: "mpesa", label: "M-Pesa", icon: "📱" },
-                  { id: "bank", label: "Bank", icon: "🏦" },
-                ].map((method) => (
+                {[{ id: "mpesa", label: "M-Pesa" }].map((method) => (
                   <button
                     key={method.id}
                     type="button"
@@ -240,7 +236,7 @@ export default function PaymentPage() {
                         : "border-slate-200 bg-white hover:bg-slate-50"
                     }`}
                   >
-                    <div className="text-2xl">{method.icon}</div>
+                    <Smartphone className="mx-auto h-7 w-7 text-emerald-600" />
                     <p className={`mt-1 text-xs font-bold ${paymentMethod === method.id ? "text-blue-700" : "text-slate-700"}`}>
                       {method.label}
                     </p>
@@ -249,9 +245,20 @@ export default function PaymentPage() {
               </div>
             </div>
 
+            <label className="mt-5 block text-sm font-bold text-slate-900">
+              M-Pesa phone number
+              <input
+                type="tel"
+                value={phone}
+                onChange={(event) => setPhone(event.target.value)}
+                placeholder="0712345678"
+                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-blue-500 focus:outline-none"
+              />
+            </label>
+
             {/* Sandbox notice */}
             <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-800">
-              <span className="font-bold">Demo mode:</span> No real payment is processed. Click "Pay now" to simulate a successful payment.
+              <span className="font-bold">Sandbox:</span> Daraja will send an M-Pesa test prompt. Payment is confirmed only after Safaricom’s callback.
             </div>
 
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">

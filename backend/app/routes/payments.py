@@ -1,6 +1,10 @@
 import os
 import uuid
+import base64
+import re
 from datetime import datetime, timezone
+
+import requests
 
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
@@ -25,6 +29,7 @@ def payment_to_dict(payment):
         "reference": payment.reference,
         "transaction_id": payment.transaction_id,
         "gateway_response": payment.gateway_response,
+        "checkout_request_id": payment.checkout_request_id,
         "created_at": payment.created_at.isoformat() if payment.created_at else None,
         "updated_at": payment.updated_at.isoformat() if payment.updated_at else None,
     }
@@ -148,6 +153,127 @@ def initiate_payment():
     }), 201
 
 
+def normalize_mpesa_phone(phone):
+    digits = re.sub(r"\D", "", str(phone or ""))
+    if digits.startswith("0"):
+        digits = "254" + digits[1:]
+    elif digits.startswith(("7", "1")):
+        digits = "254" + digits
+    if not re.fullmatch(r"254[17]\d{8}", digits):
+        raise ValueError("Use a Kenyan M-Pesa number such as 0712345678")
+    return digits
+
+
+def mpesa_configured():
+    return all(os.getenv(name) for name in (
+        "MPESA_CONSUMER_KEY", "MPESA_CONSUMER_SECRET", "MPESA_PASSKEY",
+        "MPESA_SHORTCODE", "MPESA_CALLBACK_URL",
+    ))
+
+
+def mpesa_base_url():
+    if os.getenv("MPESA_ENVIRONMENT", "sandbox").lower() == "production":
+        return "https://api.safaricom.co.ke"
+    return "https://sandbox.safaricom.co.ke"
+
+
+@payments_bp.post("/mpesa/stk-push")
+@jwt_required()
+def initiate_mpesa_payment():
+    user_id = int(get_jwt_identity())
+    user = db.session.get(User, user_id)
+    data = request.get_json(silent=True) or {}
+
+    if not user or user.role != "student":
+        return jsonify({"error": "Only students can initiate payments"}), 403
+    if not mpesa_configured():
+        return jsonify({"error": "M-Pesa is not configured on the server"}), 503
+
+    try:
+        booking_id = int(data.get("booking_id"))
+        phone = normalize_mpesa_phone(data.get("phone"))
+    except (TypeError, ValueError) as error:
+        return jsonify({"error": str(error) or "booking_id and phone are required"}), 400
+
+    booking = db.session.get(Booking, booking_id)
+    if not booking or booking.student_id != user_id:
+        return jsonify({"error": "Booking not found"}), 404
+    if booking.status != "approved":
+        return jsonify({"error": "Payment is available only after host approval"}), 409
+
+    property = db.session.get(Property, booking.property_id)
+    amount = int(float(property.price_per_month))
+    payment = Payment.query.filter_by(booking_id=booking.id).first()
+    if payment and payment.status == "successful":
+        return jsonify({"message": "Payment already completed", "payment": payment_to_dict(payment)}), 200
+    if not payment:
+        payment = Payment(
+            booking_id=booking.id, student_id=user_id, property_id=booking.property_id,
+            amount=amount, currency="KES", provider="mpesa", status="pending",
+            reference=f"QRIB-{uuid.uuid4().hex[:12].upper()}",
+        )
+        db.session.add(payment)
+        db.session.flush()
+
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+    raw_password = f"{os.environ['MPESA_SHORTCODE']}{os.environ['MPESA_PASSKEY']}{timestamp}"
+    password = base64.b64encode(raw_password.encode()).decode()
+    try:
+        token_response = requests.get(
+            f"{mpesa_base_url()}/oauth/v1/generate?grant_type=client_credentials",
+            auth=(os.environ["MPESA_CONSUMER_KEY"], os.environ["MPESA_CONSUMER_SECRET"]),
+            timeout=15,
+        )
+        token_response.raise_for_status()
+        access_token = token_response.json()["access_token"]
+        stk_response = requests.post(
+            f"{mpesa_base_url()}/mpesa/stkpush/v1/processrequest",
+            headers={"Authorization": f"Bearer {access_token}"},
+            json={
+                "BusinessShortCode": os.environ["MPESA_SHORTCODE"],
+                "Password": password,
+                "Timestamp": timestamp,
+                "TransactionType": "CustomerPayBillOnline",
+                "Amount": amount, "PartyA": phone,
+                "PartyB": os.environ["MPESA_SHORTCODE"], "PhoneNumber": phone,
+                "CallBackURL": os.environ["MPESA_CALLBACK_URL"],
+                "AccountReference": payment.reference,
+                "TransactionDesc": "Qrib accommodation payment",
+            },
+            timeout=15,
+        )
+        stk_data = stk_response.json()
+        stk_response.raise_for_status()
+        if stk_data.get("ResponseCode") not in (None, "0"):
+            raise RuntimeError(stk_data.get("ResponseDescription", "M-Pesa request failed"))
+    except (requests.RequestException, ValueError, KeyError, RuntimeError) as error:
+        db.session.rollback()
+        return jsonify({"error": str(error)}), 502
+
+    payment.checkout_request_id = stk_data.get("CheckoutRequestID")
+    payment.merchant_request_id = stk_data.get("MerchantRequestID")
+    payment.gateway_response = stk_data.get("ResponseDescription")
+    payment.updated_at = datetime.now(timezone.utc)
+    db.session.commit()
+    return jsonify({"message": "M-Pesa payment prompt sent", "payment": payment_to_dict(payment)}), 201
+
+
+@payments_bp.post("/mpesa/callback")
+def mpesa_callback():
+    callback = (request.get_json(silent=True) or {}).get("Body", {}).get("stkCallback", {})
+    checkout_id = callback.get("CheckoutRequestID")
+    payment = Payment.query.filter_by(checkout_request_id=checkout_id).first() if checkout_id else None
+    if payment:
+        payment.status = "successful" if callback.get("ResultCode") in (0, "0") else "failed"
+        payment.gateway_response = callback.get("ResultDesc")
+        items = callback.get("CallbackMetadata", {}).get("Item", [])
+        metadata = {item.get("Name"): item.get("Value") for item in items}
+        payment.transaction_id = metadata.get("MpesaReceiptNumber") or payment.transaction_id
+        payment.updated_at = datetime.now(timezone.utc)
+        db.session.commit()
+    return jsonify({"ResultCode": 0, "ResultDesc": "Accepted"}), 200
+
+
 @payments_bp.get("/<int:payment_id>")
 @jwt_required()
 def get_payment(payment_id):
@@ -174,6 +300,9 @@ def update_payment_status(payment_id):
 
     if payment.student_id != user_id:
         return jsonify({"error": "Access denied"}), 403
+
+    if payment.provider == "mpesa":
+        return jsonify({"error": "M-Pesa status is updated by Safaricom callback"}), 403
 
     data = request.get_json(silent=True) or {}
     status = data.get("status")

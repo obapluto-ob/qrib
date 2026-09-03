@@ -14,7 +14,7 @@ Qrib was designed to solve the common problem students face when moving to a new
 - Role-based access for students, hosts, and administrators
 - Secure authentication using JWT and Google login support
 - Booking creation and management workflows
-- Payment flow ready for Flutterwave-compatible processing
+- Kenya-focused M-Pesa payments through Safaricom Daraja sandbox
 - Responsive UI for mobile and desktop screens
 - Environment-based configuration for frontend/backend connectivity
 - CORS-safe API integration for deployment environments
@@ -41,7 +41,7 @@ Qrib was designed to solve the common problem students face when moving to a new
 - Render for backend deployment
 - Vercel for frontend deployment
 - Google OAuth integration
-- Flutterwave-compatible payment setup
+- Safaricom Daraja M-Pesa Express sandbox integration
 
 ## Application Flow
 
@@ -105,8 +105,9 @@ The application uses a Flask API with REST-style endpoints for property, auth, b
 
 ### Payments
 - POST /api/payments/initiate
+- POST /api/payments/mpesa/stk-push
+- POST /api/payments/mpesa/callback
 - GET /api/payments/<id>
-- PATCH /api/payments/<id>/status
 
 ### Health Check
 - GET /api/health
@@ -167,9 +168,12 @@ GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=your_google_client_secret
 FRONTEND_URL=https://your-vercel-app-url
 CORS_ALLOWED_ORIGINS=https://your-vercel-app-url
-FLUTTERWAVE_PUBLIC_KEY=your_flutterwave_public_key
-FLUTTERWAVE_SECRET_KEY=your_flutterwave_secret_key
-FLUTTERWAVE_ENCRYPTION_KEY=your_flutterwave_encryption_key
+MPESA_CONSUMER_KEY=your_daraja_consumer_key
+MPESA_CONSUMER_SECRET=your_daraja_consumer_secret
+MPESA_SHORTCODE=174379
+MPESA_PASSKEY=your_daraja_sandbox_passkey
+MPESA_ENVIRONMENT=sandbox
+MPESA_CALLBACK_URL=https://your-render-backend-url/api/payments/mpesa/callback
 ```
 
 ## Deployment

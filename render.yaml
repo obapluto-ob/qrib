@@ -16,3 +16,15 @@ services:
         sync: false
       - key: ADMIN_SEED_SECRET
         sync: false
+      - key: MPESA_CONSUMER_KEY
+        sync: false
+      - key: MPESA_CONSUMER_SECRET
+        sync: false
+      - key: MPESA_PASSKEY
+        sync: false
+      - key: MPESA_SHORTCODE
+        value: "174379"
+      - key: MPESA_ENVIRONMENT
+        value: sandbox
+      - key: MPESA_CALLBACK_URL
+        value: https://qrib-f4sk.onrender.com/api/payments/mpesa/callback

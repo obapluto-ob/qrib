@@ -34,6 +34,8 @@ class Payment(db.Model):
     reference = db.Column(db.String(255), unique=True, nullable=False)
     transaction_id = db.Column(db.String(120), nullable=True)
     gateway_response = db.Column(db.Text, nullable=True)
+    checkout_request_id = db.Column(db.String(120), nullable=True, unique=True)
+    merchant_request_id = db.Column(db.String(120), nullable=True)
 
     created_at = db.Column(
         db.DateTime(timezone=True),
