@@ -1,7 +1,7 @@
 import os
 import resend
 
-FROM = "Qrib <noreply@qrib.co.ke>"
+FROM = "Qrib <onboarding@resend.dev>"
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://qrib-mu.vercel.app")
 BRAND = "#2563EB"
 

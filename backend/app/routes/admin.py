@@ -618,7 +618,7 @@ def send_admin_email():
         return jsonify({"error": "Email service not configured"}), 503
 
     resend.api_key = api_key
-    FROM = "Qrib <noreply@qrib.co.ke>"
+    FROM = "Qrib <onboarding@resend.dev>"
 
     html = f"""
     <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8fafc;padding:40px 16px">
