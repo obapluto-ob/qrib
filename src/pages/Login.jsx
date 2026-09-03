@@ -6,6 +6,9 @@ import { useToast } from "../context/useToast";
 const API_URL = import.meta.env.VITE_API_URL;
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
+// Module-level flag — persists across re-renders and StrictMode double-invocations
+let googleInitialised = false;
+
 export default function Login() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
@@ -44,8 +47,8 @@ export default function Login() {
 
     const initializeGoogle = () => {
       if (!window.google?.accounts?.id || !googleBtnRef.current) return false;
-      if (initialised) return true;
-      initialised = true;
+      if (googleInitialised) return true;
+      googleInitialised = true;
 
       window.google.accounts.id.initialize({
         client_id: GOOGLE_CLIENT_ID,
