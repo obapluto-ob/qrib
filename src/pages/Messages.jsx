@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/useAuth";
 import { useToast } from "../context/useToast";
-import { Send, Search, Search2, ArrowLeft } from "lucide-react";
+import { Send, Search, ArrowLeft } from "lucide-react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 
@@ -115,7 +115,7 @@ export default function StudentMessages() {
             <div className="p-6 border-b border-slate-200">
               <h2 className="text-xl font-black text-slate-900">Messages</h2>
               <div className="mt-4 relative">
-                <Search2 className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
                 <input
                   type="text"
                   placeholder="Search conversations..."
