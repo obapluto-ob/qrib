@@ -1,16 +1,16 @@
 import os
 import resend
 
-resend.api_key = os.environ.get("RESEND_API_KEY", "")
-
 FROM = "Qrib <noreply@qrib.co.ke>"
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://qrib-mu.vercel.app")
 BRAND = "#2563EB"
 
 
 def _send(to: str, subject: str, html: str):
-    if not resend.api_key:
+    api_key = os.environ.get("RESEND_API_KEY", "")
+    if not api_key:
         return
+    resend.api_key = api_key
     try:
         resend.Emails.send({"from": FROM, "to": [to], "subject": subject, "html": html})
     except Exception:
