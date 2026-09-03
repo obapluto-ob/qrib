@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { useAuth } from "../context/useAuth";
@@ -21,6 +21,12 @@ export default function HostInfo() {
   const { user, logout, upgradeToHost } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
+
+  // Hosts already have an account — send them where they need to go
+  if (user?.role === "host") {
+    navigate("/host/dashboard", { replace: true });
+    return null;
+  }
 
   const savedVerification = (() => {
     try {
@@ -78,11 +84,7 @@ export default function HostInfo() {
 
     localStorage.setItem(HOST_VERIFICATION_KEY, JSON.stringify(form));
 
-    if (user?.role === "host") {
-      showToast("Details saved! Proceeding to verification.", "success");
-      navigate("/host/verification");
-    } else if (user?.role === "student") {
-      // Upgrade existing student account to host
+    if (user?.role === "student") {
       const result = await upgradeToHost();
       if (!result.ok) {
         showToast(result.message || "Could not upgrade account. Please try again.", "error");
@@ -91,7 +93,6 @@ export default function HostInfo() {
       showToast("Account upgraded to host! Proceeding to verification.", "success");
       navigate("/host/verification");
     } else {
-      // Not logged in
       showToast("Details saved! Create a host account to continue.", "success");
       navigate("/login?intent=host");
     }
@@ -126,17 +127,6 @@ export default function HostInfo() {
           <div className="mt-8 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
             Verification progress: {completedFields}/7 required checks complete.
           </div>
-
-          {user?.role === "host" && (
-            <div className="mt-6 flex gap-3">
-              <Link
-                to="/host/dashboard"
-                className="inline-block bg-brand text-white px-6 py-3 rounded-lg font-bold"
-              >
-                Go to host dashboard
-              </Link>
-            </div>
-          )}
         </div>
 
         <form onSubmit={handleSubmit} className="mt-12 grid md:grid-cols-2 gap-6 border border-line rounded-2xl p-6 md:p-8">
