@@ -19,7 +19,7 @@ export default function Login() {
     params.get("mode") === "signup" || intent === "host" ? "signup" : "login"
   );
 
-  const { login, signup, googleLogin, resetPassword, upgradeToHost } = useAuth();
+  const { login, signup, googleLogin, forgotPassword, upgradeToHost } = useAuth();
 
   const [showPassword, setShowPassword] = useState(false);
   const [role, setRole] = useState(intent === "host" ? "host" : "student");
@@ -528,9 +528,8 @@ export default function Login() {
                   e.preventDefault();
                   if (!forgotEmail.trim()) { showToast("Please enter your email.", "error"); return; }
                   setLoading(true);
-                  const result = await resetPassword({ email: forgotEmail.trim().toLowerCase(), newPassword: null, resetOnly: true });
+                  await forgotPassword(forgotEmail.trim().toLowerCase());
                   setLoading(false);
-                  // Always show success to avoid email enumeration
                   setForgotSent(true);
                 }} className="mt-6 flex flex-col gap-4">
                   <input

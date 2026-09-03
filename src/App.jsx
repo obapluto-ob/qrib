@@ -21,6 +21,7 @@ import HostVerification from "./pages/HostVerification";
 import PropertyReviews from "./pages/PropertyReviews";
 import NotificationsCenter from "./pages/NotificationsCenter";
 import Messages from "./pages/Messages";
+import ResetPassword from "./pages/ResetPassword";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function RoleHomeRedirect() {
@@ -79,10 +80,9 @@ function App() {
                 AUTH
             ================================================== */}
 
-            <Route
-              path="/login"
-              element={<Login />}
-            />
+            <Route path="/login" element={<Login />} />
+
+            <Route path="/reset-password" element={<ResetPassword />} />
 
             {/* =================================================
                 PUBLIC ACCOMMODATION

@@ -1,16 +1,16 @@
+import os
+import secrets
+from datetime import datetime, timedelta, timezone
+
 from flask import Blueprint, request, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_jwt_extended import (
-    create_access_token,
-    jwt_required,
-    get_jwt_identity,
-)
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
-import os
 
 from app.extensions import db
 from app.models import User
+from app.services.email import send_welcome, send_password_reset
 
 
 auth_bp = Blueprint(
@@ -119,11 +119,9 @@ def register():
     db.session.add(user)
     db.session.commit()
 
-    # Automatically create JWT after registration
-    access_token = create_access_token(
-        identity=str(user.id)
-    )
+    send_welcome(user.email, user.name, user.role)
 
+    access_token = create_access_token(identity=str(user.id))
     return jsonify({
         "message": "Account created successfully",
         "access_token": access_token,
@@ -250,6 +248,8 @@ def google_auth():
     db.session.add(user)
     db.session.commit()
 
+    send_welcome(user.email, user.name, user.role)
+
     access_token = create_access_token(identity=str(user.id))
     return jsonify({
         "message": "Google sign-up successful",
@@ -290,31 +290,51 @@ def upgrade_to_host():
 
 
 # =========================
-# RESET PASSWORD
+# FORGOT PASSWORD — sends reset email
 # =========================
-@auth_bp.post("/reset-password")
-def reset_password():
-    data = request.get_json()
-    if not data:
-        return jsonify({"error": "Request body is required"}), 400
-
+@auth_bp.post("/forgot-password")
+def forgot_password():
+    data = request.get_json() or {}
     email = data.get("email", "").strip().lower()
-    new_password = data.get("new_password")
-
     if not email:
         return jsonify({"error": "Email is required"}), 400
 
     user = User.query.filter_by(email=email).first()
+    if user:
+        token = secrets.token_urlsafe(32)
+        user.reset_token = token
+        user.reset_token_expires = datetime.now(timezone.utc) + timedelta(hours=1)
+        db.session.commit()
+        send_password_reset(user.email, user.name, token)
 
-    # Always return 200 to avoid email enumeration
-    if not user:
-        return jsonify({"message": "If that email exists, a reset link has been sent."}), 200
+    # Always 200 to avoid email enumeration
+    return jsonify({"message": "If that email exists, a reset link has been sent."}), 200
 
+
+# =========================
+# RESET PASSWORD — verifies token and sets new password
+# =========================
+@auth_bp.post("/reset-password")
+def reset_password():
+    data = request.get_json() or {}
+    token = data.get("token", "").strip()
+    new_password = data.get("new_password", "")
+
+    if not token:
+        return jsonify({"error": "Reset token is required"}), 400
     if not new_password or len(new_password) < 6:
-        # No new password provided — just acknowledge (email flow)
-        return jsonify({"message": "If that email exists, a reset link has been sent."}), 200
+        return jsonify({"error": "Password must be at least 6 characters"}), 400
+
+    user = User.query.filter_by(reset_token=token).first()
+    if not user or not user.reset_token_expires:
+        return jsonify({"error": "Invalid or expired reset link"}), 400
+
+    if datetime.now(timezone.utc) > user.reset_token_expires.replace(tzinfo=timezone.utc):
+        return jsonify({"error": "Reset link has expired. Please request a new one."}), 400
 
     user.hashed_password = generate_password_hash(new_password)
+    user.reset_token = None
+    user.reset_token_expires = None
     db.session.commit()
     return jsonify({"message": "Password updated successfully."}), 200
 

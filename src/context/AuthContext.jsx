@@ -191,45 +191,36 @@ export function AuthProvider({ children }) {
   };
 
   // =========================================================
-  // RESET PASSWORD
+  // FORGOT PASSWORD — sends reset email
   // =========================================================
-  const resetPassword = async ({ email, newPassword }) => {
+  const forgotPassword = async (email) => {
+    try {
+      await fetch(`${API_URL}/auth/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      return { ok: true };
+    } catch {
+      return { ok: true }; // always succeed to avoid enumeration
+    }
+  };
+
+  // =========================================================
+  // RESET PASSWORD — verifies token and sets new password
+  // =========================================================
+  const resetPassword = async ({ token, newPassword }) => {
     try {
       const response = await fetch(`${API_URL}/auth/reset-password`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email,
-          new_password: newPassword,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, new_password: newPassword }),
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        return {
-          ok: false,
-          message:
-            data.error ||
-            data.message ||
-            data.msg ||
-            "Password reset failed.",
-        };
-      }
-
-      return {
-        ok: true,
-        message: data.message || "Password reset successful.",
-      };
-    } catch (error) {
-      console.error("Reset password error:", error);
-
-      return {
-        ok: false,
-        message: "Unable to connect to the password reset API.",
-      };
+      const data = await readApiResponse(response);
+      if (!response.ok) return { ok: false, message: data.error || "Reset failed." };
+      return { ok: true, message: data.message };
+    } catch {
+      return { ok: false, message: "Unable to connect to server." };
     }
   };
 
@@ -343,6 +334,7 @@ export function AuthProvider({ children }) {
         login,
         signup,
         googleLogin,
+        forgotPassword,
         resetPassword,
         upgradeToHost,
         logout,

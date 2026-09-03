@@ -60,6 +60,9 @@ class User(db.Model):
     typing_to_id = db.Column(db.Integer, nullable=True)
     typing_until = db.Column(db.DateTime(timezone=True), nullable=True)
 
+    reset_token = db.Column(db.String(255), nullable=True)
+    reset_token_expires = db.Column(db.DateTime(timezone=True), nullable=True)
+
     properties = db.relationship(
         "Property",
         back_populates="host",
