@@ -1,10 +1,10 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy import desc, or_
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 
 from app.extensions import db
-from app.models import Message, User, Property, Notification
+from app.models import Message, User, Property, Notification, Booking
 
 messages_bp = Blueprint(
     "messages",
@@ -42,6 +42,9 @@ def send_message():
     message_text = data.get("message", "").strip()
     booking_id = data.get("booking_id")
     property_id = data.get("property_id")
+    message_type = data.get("message_type", "text")
+    if message_type not in ("text", "booking_request", "booking_approved", "booking_rejected"):
+        message_type = "text"
     
     if len(message_text) < 1:
         return jsonify({"error": "Message cannot be empty"}), 400
@@ -84,6 +87,7 @@ def send_message():
         message=message_text,
         booking_id=booking_id,
         property_id=property_id,
+        message_type=message_type,
     )
     
     db.session.add(message)
@@ -103,6 +107,84 @@ def send_message():
         "message_id": message.id,
         "status": "sent",
         "timestamp": message.created_at.isoformat(),
+    }), 201
+
+
+# ============================================================
+# SEND BOOKING REQUEST VIA CHAT
+# POST /api/messages/booking-request
+# ============================================================
+
+@messages_bp.post("/booking-request")
+@jwt_required()
+def send_booking_request():
+    user_id = int(get_jwt_identity())
+    user = db.session.get(User, user_id)
+
+    if not user or user.role != "student":
+        return jsonify({"error": "Only students can send booking requests"}), 403
+
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Request body required"}), 400
+
+    property_id = data.get("property_id")
+    move_in_date = data.get("move_in_date")
+    note = data.get("note", "").strip()
+
+    if not property_id:
+        return jsonify({"error": "property_id is required"}), 400
+    if not move_in_date:
+        return jsonify({"error": "move_in_date is required"}), 400
+
+    try:
+        property_id = int(property_id)
+        move_in_date = date.fromisoformat(str(move_in_date))
+    except (ValueError, TypeError):
+        return jsonify({"error": "Invalid property_id or move_in_date"}), 400
+
+    prop = db.session.get(Property, property_id)
+    if not prop:
+        return jsonify({"error": "Property not found"}), 404
+
+    host_id = prop.host_id
+    if host_id == user_id:
+        return jsonify({"error": "Cannot book your own property"}), 400
+
+    # Create booking in negotiating state
+    booking = Booking(
+        property_id=property_id,
+        student_id=user_id,
+        move_in_date=move_in_date,
+        status="negotiating",
+    )
+    db.session.add(booking)
+    db.session.flush()  # get booking.id before commit
+
+    msg_text = note or f"Hi, I'd like to book {prop.title}. Proposed move-in: {move_in_date}. KSh {float(prop.price_per_month):,.0f}/month."
+
+    message = Message(
+        sender_id=user_id,
+        receiver_id=host_id,
+        message=msg_text,
+        message_type="booking_request",
+        booking_id=booking.id,
+        property_id=property_id,
+    )
+    db.session.add(message)
+
+    notification = Notification(
+        user_id=host_id,
+        title="New Booking Request",
+        body=f"{user.name} wants to book {prop.title}",
+    )
+    db.session.add(notification)
+    db.session.commit()
+
+    from app.routes.bookings import booking_to_dict
+    return jsonify({
+        "booking": booking_to_dict(booking),
+        "message_id": message.id,
     }), 201
 
 
@@ -209,6 +291,7 @@ def get_conversation(other_user_id):
             "sender_id": msg.sender_id,
             "receiver_id": msg.receiver_id,
             "message": msg.message,
+            "message_type": msg.message_type,
             "booking_id": msg.booking_id,
             "property_id": msg.property_id,
             "created_at": msg.created_at.isoformat(),

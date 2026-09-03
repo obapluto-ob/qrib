@@ -1,9 +1,10 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { useAuth } from "../context/useAuth";
 import { getUniversity } from "../data/universities";
+import { useToast } from "../context/useToast";
 
 const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000/api").replace(/\/$/, "");
 const TOKEN_KEY = "qrib_access_token";
@@ -29,6 +30,8 @@ function normalizeListing(listing) {
 
 export default function HostDashboard() {
   const { user } = useAuth();
+  const { showToast } = useToast();
+  const navigate = useNavigate();
 
   const [hostListings, setHostListings] = useState([]);
   const [bookingRequests, setBookingRequests] = useState([]);
@@ -91,6 +94,7 @@ export default function HostDashboard() {
           myBookingRequests.map((booking) => ({
             id: booking.id,
             student: booking.student_name || "Student",
+            studentId: booking.student_id,
             property: normalizedProperties.find((item) => Number(item.id) === Number(booking.property_id))?.title || "Property",
             status: booking.status ? booking.status.charAt(0).toUpperCase() + booking.status.slice(1) : "Pending",
             date: booking.created_at ? new Date(booking.created_at).toLocaleDateString() : "Today",
@@ -107,6 +111,22 @@ export default function HostDashboard() {
 
     loadDashboard();
   }, [user]);
+
+  const handleRespond = async (bookingId, action) => {
+    const token = localStorage.getItem(TOKEN_KEY);
+    try {
+      const res = await fetch(`${API_URL}/bookings/${bookingId}/respond`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      if (!res.ok) throw new Error();
+      showToast(action === "approve" ? "Booking approved!" : "Booking rejected.", action === "approve" ? "success" : "info");
+      setBookingRequests((prev) => prev.map((b) => b.id === bookingId ? { ...b, status: action === "approve" ? "Approved" : "Rejected" } : b));
+    } catch {
+      showToast("Failed to update booking.", "error");
+    }
+  };
 
   const activeListings = hostListings.length;
 
@@ -204,19 +224,43 @@ export default function HostDashboard() {
                   <div>
                     <p className="font-bold text-slate-800">{request.student}</p>
                     <p className="text-sm text-slate-500">{request.property}</p>
+                    <p className="text-xs text-slate-400 mt-1">{request.date}</p>
                   </div>
 
                   <div className="flex items-center gap-3">
                     <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${
                       request.status === "Accepted" || request.status === "Approved"
                         ? "bg-emerald-100 text-emerald-700"
-                        : request.status === "Reviewing"
-                          ? "bg-amber-100 text-amber-700"
-                          : "bg-slate-200 text-slate-700"
+                        : request.status === "Rejected"
+                          ? "bg-red-100 text-red-700"
+                          : request.status === "Negotiating"
+                            ? "bg-amber-100 text-amber-700"
+                            : "bg-slate-200 text-slate-700"
                     }`}>
                       {request.status}
                     </span>
-                    <span className="text-xs text-slate-400">{request.date}</span>
+                    {(request.status === "Pending" || request.status === "Negotiating") && (
+                      <>
+                        <button
+                          onClick={() => handleRespond(request.id, "approve")}
+                          className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700"
+                        >
+                          Approve
+                        </button>
+                        <button
+                          onClick={() => handleRespond(request.id, "reject")}
+                          className="rounded-lg bg-red-500 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-600"
+                        >
+                          Reject
+                        </button>
+                      </>
+                    )}
+                    <button
+                      onClick={() => navigate(`/messages?partner=${request.studentId}`)}
+                      className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                    >
+                      Chat
+                    </button>
                   </div>
                 </div>
               ))

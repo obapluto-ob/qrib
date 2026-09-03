@@ -152,13 +152,13 @@ def update_booking(booking_id):
     if not data:
         return jsonify({"error": "Request body is required"}), 400
 
-    allowed_statuses = ["pending", "approved", "rejected", "cancelled"]
+    allowed_statuses = ["pending", "negotiating", "approved", "rejected", "cancelled"]
 
     if "status" in data:
         status = data["status"]
 
-        if user.role == "student" and status != "cancelled":
-            return jsonify({"error": "Students can only cancel bookings"}), 403
+        if user.role == "student" and status not in ("cancelled", "negotiating"):
+            return jsonify({"error": "Students can only cancel or negotiate bookings"}), 403
 
         if status not in allowed_statuses:
             return jsonify({"error": "Invalid status", "allowed_statuses": allowed_statuses}), 400
@@ -179,11 +179,42 @@ def update_booking(booking_id):
     }), 200
 
 
+@bookings_bp.patch("/<int:booking_id>/respond")
+@jwt_required()
+def respond_booking(booking_id):
+    user_id = int(get_jwt_identity())
+    user = db.session.get(User, user_id)
+
+    booking = db.session.get(Booking, booking_id)
+    if not booking:
+        return jsonify({"error": "Booking not found"}), 404
+
+    if user.role != "host" or booking.property.host_id != user_id:
+        return jsonify({"error": "Only the property host can respond"}), 403
+
+    data = request.get_json(silent=True) or {}
+    action = data.get("action")
+    if action not in ("approve", "reject"):
+        return jsonify({"error": "action must be approve or reject"}), 400
+
+    booking.status = "approved" if action == "approve" else "rejected"
+    db.session.commit()
+
+    return jsonify({"booking": booking_to_dict(booking)}), 200
+
+
 def booking_to_dict(booking):
+    prop = booking.property
+    student = booking.student
     return {
         "id": booking.id,
         "property_id": booking.property_id,
+        "property_title": prop.title if prop else None,
+        "property_image": prop.image if prop else None,
+        "property_price": float(prop.price_per_month) if prop else None,
+        "host_id": prop.host_id if prop else None,
         "student_id": booking.student_id,
+        "student_name": student.name if student else None,
         "move_in_date": (str(booking.move_in_date) if booking.move_in_date else None),
         "status": booking.status,
         "created_at": (booking.created_at.isoformat() if booking.created_at else None),

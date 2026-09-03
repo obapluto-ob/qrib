@@ -34,6 +34,12 @@ class Message(db.Model):
 
     message = db.Column(db.Text, nullable=False)
 
+    message_type = db.Column(
+        db.String(30),
+        nullable=False,
+        default="text",
+    )
+
     created_at = db.Column(
         db.DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),

@@ -195,16 +195,11 @@ export default function AccommodationDetails() {
 
   const handleBooking = () => {
     if (!user) {
-      showToast(
-        "Please log in before booking this accommodation.",
-        "error"
-      );
-
+      showToast("Please log in before booking this accommodation.", "error");
       navigate("/login");
       return;
     }
-
-    navigate(`/booking/${listing.id}`);
+    navigate(`/student/messages?partner=${listing.hostId}&property=${listing.id}`);
   };
 
   if (!id) {
@@ -553,7 +548,7 @@ export default function AccommodationDetails() {
                   type="button"
                   onClick={() => {
                     if (!user) { showToast("Please log in to message the host.", "error"); navigate("/login"); return; }
-                    navigate(`/student/messages?partner=${listing.hostId}`);
+                    navigate(`/student/messages?partner=${listing.hostId}&property=${listing.id}`);
                   }}
                   className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 font-bold text-slate-700 transition hover:bg-slate-50"
                 >
