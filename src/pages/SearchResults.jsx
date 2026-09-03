@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { useAuth } from "../context/useAuth";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import PropertyCard from "../components/PropertyCard";
@@ -41,11 +42,22 @@ function normalizeProperty(property) {
     universityName: property.university_name || "",
 
     amenities: property.amenities || [],
+    waterCost: Number(property.water_cost || 0),
+    electricityCost: Number(property.electricity_cost || 0),
   };
+}
+
+function getAffordability(trueCost, budget) {
+  if (!budget || budget <= 0) return null;
+  const ratio = trueCost / budget;
+  if (ratio <= 0.3) return { label: "Affordable", color: "bg-green-100 text-green-700", emoji: "✅" };
+  if (ratio <= 0.5) return { label: "Stretching", color: "bg-yellow-100 text-yellow-700", emoji: "⚠️" };
+  return { label: "Over budget", color: "bg-red-100 text-red-700", emoji: "🔴" };
 }
 
 export default function SearchResults() {
   const [searchParams] = useSearchParams();
+  const { user } = useAuth();
 
   const query = searchParams.get("q") || "";
   const area = searchParams.get("area") || "";
@@ -57,6 +69,7 @@ export default function SearchResults() {
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [monthlyBudget, setMonthlyBudget] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -213,6 +226,16 @@ export default function SearchResults() {
       });
     }
 
+    const budgetNum = Number(monthlyBudget) || 0;
+
+    if (budgetNum > 0) {
+      result.sort((a, b) => {
+        const aCost = a.pricePerMonth + a.waterCost + a.electricityCost;
+        const bCost = b.pricePerMonth + b.waterCost + b.electricityCost;
+        return aCost / budgetNum - bCost / budgetNum;
+      });
+    }
+
     return result;
   }, [
     listings,
@@ -221,6 +244,7 @@ export default function SearchResults() {
     city,
     budget,
     propertyType,
+    monthlyBudget,
   ]);
 
   const activeFilters = [
@@ -257,6 +281,28 @@ export default function SearchResults() {
             Search student accommodation available
             on Qrib.
           </p>
+
+          <div className="mt-5 flex items-center gap-3 rounded-2xl border border-blue-200 bg-blue-50 px-5 py-4">
+            <span className="text-lg">💰</span>
+            <div className="flex flex-1 flex-wrap items-center gap-3">
+              <label className="text-sm font-bold text-blue-800 whitespace-nowrap">
+                My monthly budget (KSh)
+              </label>
+              <input
+                type="number"
+                min="0"
+                placeholder="e.g. 30000"
+                value={monthlyBudget}
+                onChange={(e) => setMonthlyBudget(e.target.value)}
+                className="w-44 rounded-xl border border-blue-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              />
+              {monthlyBudget > 0 && (
+                <span className="text-xs text-blue-600 font-medium">
+                  Properties are sorted by affordability. ✅ ≤30% · ⚠️ 30–50% · 🔴 &gt;50% of your budget
+                </span>
+              )}
+            </div>
+          </div>
 
           {activeFilters.length > 0 && (
             <div className="mt-4 flex flex-wrap gap-2">
@@ -355,12 +401,17 @@ export default function SearchResults() {
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                {results.map((listing) => (
-                  <PropertyCard
-                    key={listing.id}
-                    listing={listing}
-                  />
-                ))}
+                {results.map((listing) => {
+                  const trueCost = listing.pricePerMonth + listing.waterCost + listing.electricityCost;
+                  const affordability = getAffordability(trueCost, Number(monthlyBudget));
+                  return (
+                    <PropertyCard
+                      key={listing.id}
+                      listing={listing}
+                      affordability={affordability}
+                    />
+                  );
+                })}
               </div>
             )}
           </section>

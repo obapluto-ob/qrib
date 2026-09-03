@@ -18,7 +18,7 @@ function getSafeImageUrl(imageUrl) {
   return trimmed;
 }
 
-export default function PropertyCard({ listing }) {
+export default function PropertyCard({ listing, affordability }) {
   const uni = getUniversity(listing.universityId);
   const imageSrc = getSafeImageUrl(listing.image);
 
@@ -76,6 +76,12 @@ export default function PropertyCard({ listing }) {
             / month
           </span>
         </p>
+
+        {affordability && (
+          <span className={`mt-2 inline-block rounded-full px-3 py-1 text-xs font-bold ${affordability.color}`}>
+            {affordability.emoji} {affordability.label}
+          </span>
+        )}
 
         {listing.type && (
           <div className="mt-3">
