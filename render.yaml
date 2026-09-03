@@ -8,7 +8,11 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.3
+      - key: FLASK_APP
+        value: run.py
       - key: FRONTEND_URL
         value: https://qrib-mu.vercel.app
       - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: ADMIN_SEED_SECRET
         sync: false

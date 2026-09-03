@@ -5,7 +5,7 @@ import { Send, Search, ArrowLeft } from "lucide-react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000/api").replace(/\/$/, "");
 
 export default function StudentMessages() {
   const { user, token } = useAuth();
@@ -34,7 +34,7 @@ export default function StudentMessages() {
   const fetchConversations = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${BACKEND_URL}/api/messages/conversations`, {
+      const response = await fetch(`${API_URL}/messages/conversations`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.ok) {
@@ -51,7 +51,7 @@ export default function StudentMessages() {
   const fetchMessages = async (partnerId) => {
     try {
       const response = await fetch(
-        `${BACKEND_URL}/api/messages/user/${partnerId}`,
+        `${API_URL}/messages/user/${partnerId}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -75,7 +75,7 @@ export default function StudentMessages() {
 
     try {
       setSending(true);
-      const response = await fetch(`${BACKEND_URL}/api/messages`, {
+      const response = await fetch(`${API_URL}/messages`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,

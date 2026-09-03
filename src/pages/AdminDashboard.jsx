@@ -4,7 +4,7 @@ import { useAuth } from "../context/useAuth";
 import { useToast } from "../context/useToast";
 import { ChevronDown, Search, X, CheckCircle, AlertCircle, Trash2, Check } from "lucide-react";
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000/api").replace(/\/$/, "");
 
 export default function AdminDashboard() {
   const { user, token } = useAuth();
@@ -51,7 +51,7 @@ export default function AdminDashboard() {
   const fetchStats = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${BACKEND_URL}/api/admin/dashboard/stats`, {
+      const response = await fetch(`${API_URL}/admin/dashboard/stats`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.ok) {
@@ -77,7 +77,7 @@ export default function AdminDashboard() {
         ...(searchQuery && { search: searchQuery }),
       });
       
-      const response = await fetch(`${BACKEND_URL}/api/admin/users?${params}`, {
+      const response = await fetch(`${API_URL}/admin/users?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.ok) {
@@ -94,7 +94,7 @@ export default function AdminDashboard() {
   const fetchProperties = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${BACKEND_URL}/api/admin/properties/moderation?page=${currentPage}&limit=10`, {
+      const response = await fetch(`${API_URL}/admin/properties/moderation?page=${currentPage}&limit=10`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.ok) {
@@ -111,7 +111,7 @@ export default function AdminDashboard() {
   const fetchVerifications = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${BACKEND_URL}/api/admin/verifications/pending?page=${currentPage}&limit=10`, {
+      const response = await fetch(`${API_URL}/admin/verifications/pending?page=${currentPage}&limit=10`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.ok) {
@@ -127,7 +127,7 @@ export default function AdminDashboard() {
 
   const approveProperty = async (propertyId) => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/admin/properties/${propertyId}/verify`, {
+      const response = await fetch(`${API_URL}/admin/properties/${propertyId}/verify`, {
         method: "PATCH",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -144,9 +144,24 @@ export default function AdminDashboard() {
     }
   };
 
+  const deleteProperty = async (propertyId) => {
+    try {
+      const response = await fetch(`${API_URL}/admin/properties/${propertyId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) {
+        showToast("Property deleted successfully", "success");
+        fetchProperties();
+      }
+    } catch (error) {
+      showToast("Error deleting property", "error");
+    }
+  };
+
   const approveVerification = async (verificationId, notes = "") => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/admin/verifications/${verificationId}/approve`, {
+      const response = await fetch(`${API_URL}/admin/verifications/${verificationId}/approve`, {
         method: "PATCH",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -169,7 +184,7 @@ export default function AdminDashboard() {
       return;
     }
     try {
-      const response = await fetch(`${BACKEND_URL}/api/admin/verifications/${verificationId}/reject`, {
+      const response = await fetch(`${API_URL}/admin/verifications/${verificationId}/reject`, {
         method: "PATCH",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -189,7 +204,7 @@ export default function AdminDashboard() {
   const deleteUser = async (userId) => {
     if (!window.confirm("Are you sure? This action cannot be undone.")) return;
     try {
-      const response = await fetch(`${BACKEND_URL}/api/admin/users/${userId}`, {
+      const response = await fetch(`${API_URL}/admin/users/${userId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -471,16 +486,5 @@ export default function AdminDashboard() {
   );
 }
 
-// Helper function
-async function deleteProperty(propertyId) {
-  const token = localStorage.getItem("token");
-  try {
-    await fetch(`${BACKEND_URL}/api/admin/properties/${propertyId}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-  } catch (error) {
-    console.error("Error deleting property", error);
-  }
-}
+
 

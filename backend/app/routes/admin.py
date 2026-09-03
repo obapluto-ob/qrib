@@ -4,7 +4,7 @@ from sqlalchemy import func, desc
 from datetime import datetime, timezone
 
 from app.extensions import db
-from app.models import User, Property, Booking, Review, Notification, HostVerification, Payment
+from app.models import User, Property, Booking, Review, Notification, HostVerification, Payment, Message
 
 admin_bp = Blueprint(
     "admin",

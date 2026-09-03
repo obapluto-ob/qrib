@@ -239,6 +239,45 @@ def google_auth():
 
 
 # =========================
+# SEED ADMIN
+# =========================
+@auth_bp.post("/seed-admin")
+def seed_admin():
+    secret = request.get_json().get("secret") if request.get_json() else None
+    if secret != os.getenv("ADMIN_SEED_SECRET"):
+        return jsonify({"error": "Forbidden"}), 403
+
+    data = request.get_json()
+    email = data.get("email", "").strip().lower()
+    password = data.get("password", "")
+    name = data.get("name", "Admin")
+
+    if not email or not password:
+        return jsonify({"error": "Email and password are required"}), 400
+
+    user = User.query.filter_by(email=email).first()
+    if user:
+        user.role = "admin"
+        db.session.commit()
+        return jsonify({"message": f"{email} promoted to admin"}), 200
+
+    username = email.split("@")[0]
+    if User.query.filter_by(username=username).first():
+        username = f"{username}_{User.query.count() + 1}"
+
+    user = User(
+        username=username,
+        email=email,
+        name=name,
+        role="admin",
+        hashed_password=generate_password_hash(password),
+    )
+    db.session.add(user)
+    db.session.commit()
+    return jsonify({"message": "Admin account created"}), 201
+
+
+# =========================
 # CURRENT USER
 # =========================
 @auth_bp.get("/me")
