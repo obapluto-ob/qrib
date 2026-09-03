@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import logo from "../assets/qrib-logo.png";
 
 export default function Footer() {
   return (
@@ -6,8 +7,8 @@ export default function Footer() {
       <div className="max-w-[1440px] mx-auto px-6 lg:px-20 py-12">
         <div className="grid md:grid-cols-3 gap-10">
           <div>
-            <Link to="/" className="text-2xl font-extrabold text-brand">
-              Qrib
+            <Link to="/">
+              <img src={logo} alt="Qrib" className="h-9 w-auto object-contain" />
             </Link>
             <p className="text-sm text-muted mt-3 max-w-sm">
               Helping Kenyan students find safe, affordable accommodation

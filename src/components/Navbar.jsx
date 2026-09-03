@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
 import { Bell, MessageSquare } from "lucide-react";
+import logo from "../assets/qrib-logo.png";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -37,32 +38,7 @@ export default function Navbar() {
           onClick={closeMenu}
           className="flex items-center gap-3"
         >
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 shadow-lg shadow-blue-600/20">
-            <svg
-              width="21"
-              height="21"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="white"
-              strokeWidth="2"
-            >
-              <path
-                d="M3 10.5 12 3l9 7.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-
-              <path
-                d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </div>
-
-          <span className="text-2xl font-extrabold tracking-tight text-brand">
-            Qrib
-          </span>
+          <img src={logo} alt="Qrib" className="h-10 w-auto object-contain" />
         </Link>
 
         {/* DESKTOP */}
