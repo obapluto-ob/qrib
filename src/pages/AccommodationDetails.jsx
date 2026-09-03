@@ -19,6 +19,7 @@ import { getUniversity } from "../data/universities";
 import { useAuth } from "../context/useAuth";
 import { useToast } from "../context/useToast";
 import PropertyWeather from "../components/PropertyWeather";
+import WalkingTime from "../components/WalkingTime";
 
 const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000/api").replace(/\/$/, "");
 
@@ -549,6 +550,14 @@ export default function AccommodationDetails() {
                         : "Nearby campus"}
                     </p>
                   </div>
+                </div>
+
+                <div className="mt-4">
+                  <WalkingTime
+                    universityId={listing.universityId}
+                    propertyLat={listing.latitude}
+                    propertyLng={listing.longitude}
+                  />
                 </div>
               </section>
 

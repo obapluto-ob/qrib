@@ -1,0 +1,58 @@
+import { getUniversity } from "../data/universities";
+
+const WALKING_SPEED_KMH = 5;
+
+function haversineKm(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function formatWalkTime(minutes) {
+  if (minutes < 1) return "< 1 min walk";
+  if (minutes < 60) return `${Math.round(minutes)} min walk`;
+  const h = Math.floor(minutes / 60);
+  const m = Math.round(minutes % 60);
+  return m > 0 ? `${h}h ${m}min walk` : `${h}h walk`;
+}
+
+function getWalkLabel(minutes) {
+  if (minutes <= 10) return { text: "Very close", color: "bg-green-100 text-green-700" };
+  if (minutes <= 20) return { text: "Close", color: "bg-emerald-100 text-emerald-700" };
+  if (minutes <= 40) return { text: "Moderate", color: "bg-yellow-100 text-yellow-700" };
+  return { text: "Far", color: "bg-red-100 text-red-700" };
+}
+
+export default function WalkingTime({ universityId, propertyLat, propertyLng, compact = false }) {
+  const uni = getUniversity(universityId);
+
+  if (!uni?.gateLat || !propertyLat || !propertyLng) return null;
+
+  const distKm = haversineKm(propertyLat, propertyLng, uni.gateLat, uni.gateLng);
+  const minutes = (distKm / WALKING_SPEED_KMH) * 60;
+  const label = getWalkLabel(minutes);
+
+  if (compact) {
+    return (
+      <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold ${label.color}`}>
+        🚶 {formatWalkTime(minutes)}
+      </span>
+    );
+  }
+
+  return (
+    <div className={`flex items-center gap-3 rounded-xl px-4 py-3 ${label.color}`}>
+      <span className="text-xl">🚶</span>
+      <div>
+        <p className="text-sm font-extrabold">{formatWalkTime(minutes)} to {uni.name} gate</p>
+        <p className="text-xs font-medium opacity-80">{distKm.toFixed(2)} km · {label.text}</p>
+      </div>
+    </div>
+  );
+}

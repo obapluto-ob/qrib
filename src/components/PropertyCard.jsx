@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { getUniversity } from "../data/universities";
+import WalkingTime from "./WalkingTime";
 
 const fallbackImage =
   "https://images.unsplash.com/photo-1494526585095-c41746248156?w=1200&q=80";
@@ -68,6 +69,13 @@ export default function PropertyCard({ listing, affordability }) {
           {listing.distanceKm} km from{" "}
           {uni?.name || listing.universityName || "campus"}
         </p>
+
+        <WalkingTime
+          universityId={listing.universityId}
+          propertyLat={listing.latitude}
+          propertyLng={listing.longitude}
+          compact
+        />
 
         <p className="text-xl font-extrabold text-ink">
           KSh {Number(listing.pricePerMonth || 0).toLocaleString()}

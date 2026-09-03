@@ -44,6 +44,8 @@ function normalizeProperty(property) {
     amenities: property.amenities || [],
     waterCost: Number(property.water_cost || 0),
     electricityCost: Number(property.electricity_cost || 0),
+    latitude: property.latitude,
+    longitude: property.longitude,
   };
 }
 
