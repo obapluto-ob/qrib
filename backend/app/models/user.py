@@ -57,6 +57,9 @@ class User(db.Model):
         nullable=False
     )
 
+    typing_to_id = db.Column(db.Integer, nullable=True)
+    typing_until = db.Column(db.DateTime(timezone=True), nullable=True)
+
     properties = db.relationship(
         "Property",
         back_populates="host",

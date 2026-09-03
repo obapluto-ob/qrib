@@ -40,6 +40,8 @@ class Message(db.Model):
         default="text",
     )
 
+    read_at = db.Column(db.DateTime(timezone=True), nullable=True)
+
     created_at = db.Column(
         db.DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
-import { Send, Search, MessageSquare, Home, Calendar, CheckCircle, XCircle, Clock, Building2 } from "lucide-react";
+import { Send, Search, MessageSquare, Home, Calendar, Check, CheckCheck, CheckCircle, XCircle, Clock, Building2 } from "lucide-react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { useAuth } from "../context/useAuth";
@@ -13,6 +13,28 @@ function addDays(n) {
   const d = new Date();
   d.setDate(d.getDate() + n);
   return d.toISOString().split("T")[0];
+}
+
+function playMessageSound(incoming = false) {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const context = new AudioContext();
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.type = "sine";
+    oscillator.frequency.value = incoming ? 740 : 520;
+    gain.gain.setValueAtTime(0.0001, context.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.08, context.currentTime + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.16);
+    oscillator.connect(gain);
+    gain.connect(context.destination);
+    oscillator.start();
+    oscillator.stop(context.currentTime + 0.18);
+    oscillator.addEventListener("ended", () => context.close(), { once: true });
+  } catch {
+    // Browser audio may be unavailable until the user interacts with the page.
+  }
 }
 
 // ── Special message bubble for booking requests / responses ──
@@ -122,6 +144,7 @@ export default function StudentMessages() {
   const [sending, setSending] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [propSearch, setPropSearch] = useState("");
+  const [partnerTyping, setPartnerTyping] = useState(false);
 
   // Booking request modal state
   const [showBookingModal, setShowBookingModal] = useState(false);
@@ -131,6 +154,8 @@ export default function StudentMessages() {
 
   const messagesEndRef = useRef(null);
   const pollRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
+  const previousMessageIdsRef = useRef(null);
   const getToken = () => localStorage.getItem(TOKEN_KEY);
 
   // Auto-open from ?partner= and ?property= URL params
@@ -211,6 +236,41 @@ export default function StudentMessages() {
   }, [selectedPartnerId]);
 
   useEffect(() => {
+    if (!selectedPartnerId || !getToken()) return;
+    const pollTyping = async () => {
+      try {
+        const res = await fetch(`${API_URL}/messages/typing/${selectedPartnerId}`, {
+          headers: { Authorization: `Bearer ${getToken()}` },
+        });
+        if (res.ok) setPartnerTyping(Boolean((await res.json()).typing));
+      } catch {
+        setPartnerTyping(false);
+      }
+    };
+    pollTyping();
+    const interval = setInterval(pollTyping, 2000);
+    return () => clearInterval(interval);
+  }, [selectedPartnerId]);
+
+  useEffect(() => {
+    if (previousMessageIdsRef.current === null) {
+      previousMessageIdsRef.current = new Set(messages.map((message) => message.id));
+      return;
+    }
+    const previousIds = previousMessageIdsRef.current;
+    const newIncoming = messages.some(
+      (message) => !message.is_own_message && !previousIds.has(message.id)
+    );
+    if (newIncoming) playMessageSound(true);
+    previousMessageIdsRef.current = new Set(messages.map((message) => message.id));
+  }, [messages]);
+
+  useEffect(() => {
+    previousMessageIdsRef.current = null;
+    setPartnerTyping(false);
+  }, [selectedPartnerId]);
+
+  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
@@ -225,6 +285,7 @@ export default function StudentMessages() {
         body: JSON.stringify({ receiver_id: selectedPartnerId, message: messageText.trim() }),
       });
       if (res.ok) {
+        playMessageSound(false);
         setMessageText("");
         await fetchMessages(selectedPartnerId);
         await fetchConversations();
@@ -237,6 +298,25 @@ export default function StudentMessages() {
     } finally {
       setSending(false);
     }
+  };
+
+  const handleMessageChange = (event) => {
+    const value = event.target.value;
+    setMessageText(value);
+    if (!selectedPartnerId) return;
+    fetch(`${API_URL}/messages/typing`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${getToken()}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ partner_id: selectedPartnerId, typing: Boolean(value.trim()) }),
+    }).catch(() => {});
+    clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => {
+      fetch(`${API_URL}/messages/typing`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${getToken()}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ partner_id: selectedPartnerId, typing: false }),
+      }).catch(() => {});
+    }, 3000);
   };
 
   const handleSendBookingRequest = async () => {
@@ -424,7 +504,9 @@ export default function StudentMessages() {
                   </div>
                   <div>
                     <p className="font-bold text-slate-900">{activeConv?.partner_name || "Host"}</p>
-                    <p className="text-xs text-slate-400">{isHost ? "Student" : "Host"}</p>
+                    <p className="text-xs text-slate-400">
+                      {partnerTyping ? "Typing..." : isHost ? "Student" : "Host"}
+                    </p>
                   </div>
                 </div>
                 {selectedProperty && !isHost && (
@@ -493,8 +575,9 @@ export default function StudentMessages() {
                       <div key={msg.id} className={`flex ${msg.is_own_message ? "justify-end" : "justify-start"}`}>
                         <div className={`max-w-xs rounded-2xl px-4 py-3 text-sm ${msg.is_own_message ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-900"}`}>
                           <p>{msg.message}</p>
-                          <p className={`mt-1 text-[10px] ${msg.is_own_message ? "text-blue-200" : "text-slate-400"}`}>
+                          <p className={`mt-1 flex items-center justify-end gap-1 text-[10px] ${msg.is_own_message ? "text-blue-200" : "text-slate-400"}`}>
                             {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                            {msg.is_own_message && (msg.read_at ? <CheckCheck className="h-3.5 w-3.5 text-sky-200" /> : <Check className="h-3.5 w-3.5" />)}
                           </p>
                         </div>
                       </div>
@@ -510,7 +593,7 @@ export default function StudentMessages() {
                   <input
                     type="text"
                     value={messageText}
-                    onChange={(e) => setMessageText(e.target.value)}
+                    onChange={handleMessageChange}
                     placeholder="Type a message..."
                     disabled={sending}
                     className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none disabled:opacity-50"

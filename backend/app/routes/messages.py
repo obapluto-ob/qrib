@@ -110,6 +110,47 @@ def send_message():
     }), 201
 
 
+@messages_bp.post("/typing")
+@jwt_required()
+def update_typing_status():
+    user_id = int(get_jwt_identity())
+    data = request.get_json(silent=True) or {}
+    try:
+        partner_id = int(data.get("partner_id"))
+    except (TypeError, ValueError):
+        return jsonify({"error": "partner_id must be an integer"}), 400
+
+    partner = db.session.get(User, partner_id)
+    if not partner or partner_id == user_id:
+        return jsonify({"error": "Conversation partner not found"}), 404
+
+    sender = db.session.get(User, user_id)
+    sender.typing_to_id = partner_id if data.get("typing") else None
+    sender.typing_until = datetime.now(timezone.utc) if not data.get("typing") else datetime.now(timezone.utc)
+    if data.get("typing"):
+        from datetime import timedelta
+        sender.typing_until = datetime.now(timezone.utc) + timedelta(seconds=6)
+    db.session.commit()
+    return jsonify({"typing": bool(data.get("typing"))}), 200
+
+
+@messages_bp.get("/typing/<int:other_user_id>")
+@jwt_required()
+def get_typing_status(other_user_id):
+    user_id = int(get_jwt_identity())
+    other_user = db.session.get(User, other_user_id)
+    if not other_user:
+        return jsonify({"error": "User not found"}), 404
+
+    now = datetime.now(timezone.utc)
+    is_typing = (
+        other_user.typing_to_id == user_id
+        and other_user.typing_until is not None
+        and other_user.typing_until > now
+    )
+    return jsonify({"typing": is_typing}), 200
+
+
 # ============================================================
 # SEND BOOKING REQUEST VIA CHAT
 # POST /api/messages/booking-request
@@ -284,7 +325,14 @@ def get_conversation(other_user_id):
     if not other_user:
         return jsonify({"error": "User not found"}), 404
     
-    # Get messages between the two users
+    Message.query.filter(
+        Message.sender_id == other_user_id,
+        Message.receiver_id == user_id,
+        Message.read_at.is_(None),
+    ).update({Message.read_at: datetime.now(timezone.utc)}, synchronize_session=False)
+    db.session.commit()
+
+    # Get messages between exactly these two users.
     messages_query = Message.query.filter(
         or_(
             (Message.sender_id == user_id) & (Message.receiver_id == other_user_id),
@@ -305,6 +353,7 @@ def get_conversation(other_user_id):
             "message_type": msg.message_type,
             "booking_id": msg.booking_id,
             "property_id": msg.property_id,
+            "read_at": msg.read_at.isoformat() if msg.read_at else None,
             "created_at": msg.created_at.isoformat(),
             "is_own_message": msg.sender_id == user_id,
         })
@@ -341,10 +390,17 @@ def get_property_messages(property_id):
     prop = db.session.get(Property, property_id)
     if not prop:
         return jsonify({"error": "Property not found"}), 404
+
+    if not Message.query.filter(
+        Message.property_id == property_id,
+        or_(Message.sender_id == user_id, Message.receiver_id == user_id),
+    ).first():
+        return jsonify({"error": "You do not have access to this conversation"}), 403
     
     # Get messages for this property
-    messages_pagination = Message.query.filter_by(
-        property_id=property_id
+    messages_pagination = Message.query.filter(
+        Message.property_id == property_id,
+        or_(Message.sender_id == user_id, Message.receiver_id == user_id),
     ).order_by(desc(Message.created_at)).paginate(page=page, per_page=limit, error_out=False)
     
     messages_data = []
@@ -359,6 +415,9 @@ def get_property_messages(property_id):
             "booking_id": msg.booking_id,
             "property_id": msg.property_id,
             "created_at": msg.created_at.isoformat(),
+            "message_type": msg.message_type,
+            "booking_id": msg.booking_id,
+            "property_id": msg.property_id,
         })
     
     return jsonify({
