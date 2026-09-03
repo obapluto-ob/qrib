@@ -30,7 +30,7 @@ export default function Login() {
 
   // Google role picker
   const [googlePending, setGooglePending] = useState(null); // { credential }
-  const [googleRole, setGoogleRole] = useState("student");
+  const [googleRole, setGoogleRole] = useState(intent === "host" ? "host" : "student");
 
   // ---------------------------------------------------------
   // GOOGLE AUTH
@@ -54,7 +54,7 @@ export default function Login() {
             const result = await googleLogin({ credential: response.credential });
             if (!result.ok && result.is_new_user) {
               setGooglePending({ credential: response.credential });
-              setGoogleRole("student");
+              setGoogleRole(intent === "host" ? "host" : "student");
             } else if (result.ok && !result.is_new_user) {
               showToast("Signed in with Google.", "success");
               navigate(result.user?.role === "host" ? "/host/dashboard" : "/student/dashboard", { replace: true });
@@ -1094,7 +1094,7 @@ export default function Login() {
                 if (!result.ok) { showToast(result.message || "Google sign-in failed.", "error"); return; }
                 setGooglePending(null);
                 showToast("Account created with Google.", "success");
-                navigate(googleRole === "host" ? "/host/dashboard" : "/student/dashboard", { replace: true });
+                navigate(googleRole === "host" ? "/host/verification" : "/student/dashboard", { replace: true });
               } catch {
                 showToast("Google sign-in failed. Try again.", "error");
               } finally {

@@ -18,7 +18,7 @@ const defaultVerification = {
 };
 
 export default function HostInfo() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
 
@@ -81,7 +81,13 @@ export default function HostInfo() {
     if (user?.role === "host") {
       showToast("Details saved! Proceeding to verification.", "success");
       navigate("/host/verification");
+    } else if (user?.role === "student") {
+      // Logged in as student — log them out first, then send to host signup
+      logout();
+      showToast("Details saved! Please create a host account to continue.", "success");
+      navigate("/login?intent=host");
     } else {
+      // Not logged in
       showToast("Details saved! Create a host account to continue.", "success");
       navigate("/login?intent=host");
     }
