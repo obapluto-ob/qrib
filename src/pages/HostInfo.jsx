@@ -18,7 +18,7 @@ const defaultVerification = {
 };
 
 export default function HostInfo() {
-  const { user, logout } = useAuth();
+  const { user, logout, upgradeToHost } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
 
@@ -50,7 +50,7 @@ export default function HostInfo() {
     setForm((current) => ({ ...current, [key]: value }));
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
     const requiredFields = [
@@ -82,10 +82,14 @@ export default function HostInfo() {
       showToast("Details saved! Proceeding to verification.", "success");
       navigate("/host/verification");
     } else if (user?.role === "student") {
-      // Logged in as student — log them out first, then send to host signup
-      logout();
-      showToast("Details saved! Please create a host account to continue.", "success");
-      navigate("/login?intent=host");
+      // Upgrade existing student account to host
+      const result = await upgradeToHost();
+      if (!result.ok) {
+        showToast(result.message || "Could not upgrade account. Please try again.", "error");
+        return;
+      }
+      showToast("Account upgraded to host! Proceeding to verification.", "success");
+      navigate("/host/verification");
     } else {
       // Not logged in
       showToast("Details saved! Create a host account to continue.", "success");

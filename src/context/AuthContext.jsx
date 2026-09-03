@@ -303,6 +303,26 @@ export function AuthProvider({ children }) {
   };
 
   // =========================================================
+  // UPGRADE TO HOST
+  // =========================================================
+  const upgradeToHost = async () => {
+    try {
+      const token = localStorage.getItem(TOKEN_KEY);
+      const response = await fetch(`${API_URL}/auth/upgrade-to-host`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await readApiResponse(response);
+      if (!response.ok) return { ok: false, message: data.error || "Upgrade failed." };
+      localStorage.setItem(TOKEN_KEY, data.access_token);
+      setUser(data.user);
+      return { ok: true, user: data.user };
+    } catch {
+      return { ok: false, message: "Unable to connect to server." };
+    }
+  };
+
+  // =========================================================
   // LOGOUT
   // =========================================================
   const logout = () => {
@@ -324,6 +344,7 @@ export function AuthProvider({ children }) {
         signup,
         googleLogin,
         resetPassword,
+        upgradeToHost,
         logout,
       }}
     >

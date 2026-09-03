@@ -19,7 +19,7 @@ export default function Login() {
     params.get("mode") === "signup" || intent === "host" ? "signup" : "login"
   );
 
-  const { login, signup, googleLogin, resetPassword } = useAuth();
+  const { login, signup, googleLogin, resetPassword, upgradeToHost } = useAuth();
 
   const [showPassword, setShowPassword] = useState(false);
   const [role, setRole] = useState(intent === "host" ? "host" : "student");
@@ -61,9 +61,16 @@ export default function Login() {
               setGoogleRole(currentIntent === "host" ? "host" : "student");
             } else if (result.ok) {
               const userRole = result.user?.role;
-              if (currentIntent === "host" && userRole !== "host") {
-                // Existing student account trying to become host — tell them
-                showToast("This Google account is linked to a student account. Please sign up with a new account to become a host.", "error");
+              if (currentIntent === "host" && userRole === "student") {
+                // Existing student signing in with Google via host intent
+                // Upgrade their account seamlessly
+                const upgrade = await upgradeToHost();
+                if (upgrade.ok) {
+                  showToast("Account upgraded to host!", "success");
+                  navigate("/host/verification", { replace: true });
+                } else {
+                  showToast(upgrade.message || "Could not upgrade account.", "error");
+                }
               } else {
                 showToast("Signed in with Google.", "success");
                 navigate(

@@ -260,6 +260,36 @@ def google_auth():
 
 
 # =========================
+# UPGRADE TO HOST
+# =========================
+@auth_bp.patch("/upgrade-to-host")
+@jwt_required()
+def upgrade_to_host():
+    user_id = get_jwt_identity()
+    user = db.session.get(User, int(user_id))
+
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    if user.role == "host":
+        access_token = create_access_token(identity=str(user.id))
+        return jsonify({"message": "Already a host", "access_token": access_token, "user": user_to_dict(user)}), 200
+
+    if user.role == "admin":
+        return jsonify({"error": "Admin accounts cannot be changed"}), 403
+
+    user.role = "host"
+    db.session.commit()
+
+    access_token = create_access_token(identity=str(user.id))
+    return jsonify({
+        "message": "Account upgraded to host",
+        "access_token": access_token,
+        "user": user_to_dict(user),
+    }), 200
+
+
+# =========================
 # RESET PASSWORD
 # =========================
 @auth_bp.post("/reset-password")
