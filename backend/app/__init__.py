@@ -89,6 +89,13 @@ def create_app():
     with app.app_context():
         db.create_all()
 
+        # Ensure message_type column exists (safe on every startup)
+        db.session.execute(db.text(
+            "ALTER TABLE messages ADD COLUMN IF NOT EXISTS "
+            "message_type VARCHAR(30) NOT NULL DEFAULT 'text'"
+        ))
+        db.session.commit()
+
         for university in UNIVERSITY_SEED:
             entry = db.session.get(University, university["id"])
             if entry is None:
