@@ -1,5 +1,15 @@
-import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
+import { useEffect } from "react";
+import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
+import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+
+// Fix broken default marker icons in Vite/webpack builds
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+});
 
 const cityCoordinates = {
   Nairobi: [-1.286389, 36.817223],
@@ -25,35 +35,56 @@ const cityCoordinates = {
   Kilimani: [-1.287, 36.789],
 };
 
+// Re-centers map when listings change
+function RecenterMap({ center }) {
+  const map = useMap();
+  useEffect(() => {
+    map.setView(center, map.getZoom(), { animate: true });
+  }, [center[0], center[1]]);
+  return null;
+}
+
 export default function MapView({ listings = [] }) {
   const first = listings[0];
-  const center = cityCoordinates[first?.city] || cityCoordinates.Nairobi;
+  const center = (first?.latitude && first?.longitude)
+    ? [Number(first.latitude), Number(first.longitude)]
+    : cityCoordinates[first?.city] || cityCoordinates.Nairobi;
 
   return (
     <div className="h-[620px] w-full overflow-hidden rounded-2xl border border-line bg-slate-100 shadow-sm">
       <MapContainer
         center={center}
-        zoom={11}
+        zoom={12}
         scrollWheelZoom={false}
         className="h-full w-full"
       >
         <TileLayer
-          attribution='&copy; OpenStreetMap contributors'
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
+        <RecenterMap center={center} />
+
         {listings.map((listing) => {
-          const coords = cityCoordinates[listing.city] || cityCoordinates.Nairobi;
+          const pos = (listing.latitude && listing.longitude)
+            ? [Number(listing.latitude), Number(listing.longitude)]
+            : cityCoordinates[listing.city] || cityCoordinates.Nairobi;
 
           return (
-            <Marker key={listing.id} position={coords}>
+            <Marker key={listing.id} position={pos}>
               <Popup>
-                <div className="text-sm">
-                  <strong className="block">{listing.title}</strong>
-                  <span className="block text-xs text-slate-600">{listing.city}</span>
-                  <span className="mt-1 block font-semibold text-slate-900">
-                    KSh {Number(listing.pricePerMonth || 0).toLocaleString()} / month
+                <div className="text-sm min-w-[160px]">
+                  <strong className="block text-slate-900">{listing.title}</strong>
+                  <span className="block text-xs text-slate-500 mt-0.5">{listing.area}, {listing.city}</span>
+                  <span className="block font-bold text-slate-900 mt-1">
+                    KSh {Number(listing.pricePerMonth || 0).toLocaleString()} / mo
                   </span>
+                  <a
+                    href={`/property/${listing.id}`}
+                    className="mt-2 block rounded-lg bg-blue-600 px-3 py-1.5 text-center text-xs font-bold text-white hover:bg-blue-700"
+                  >
+                    View listing
+                  </a>
                 </div>
               </Popup>
             </Marker>
