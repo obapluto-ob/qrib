@@ -6,7 +6,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy import func
 
 from app.extensions import db
-from app.models import Property, User, University
+from app.models import Property, User, University, Booking, Payment, Review, Message, Notification
 from app.models.property_image import PropertyImage
 
 
@@ -316,9 +316,17 @@ def update_property(property_id):
     ]
 
     for field in allowed_fields:
-
         if field in data:
             setattr(property, field, data[field])
+
+    # Update images array if provided
+    if "images" in data and isinstance(data["images"], list):
+        PropertyImage.query.filter_by(property_id=property_id).delete()
+        for url in data["images"]:
+            if url and str(url).strip():
+                db.session.add(PropertyImage(property_id=property_id, image_url=str(url).strip()))
+        if data["images"]:
+            property.image = data["images"][0]
 
     db.session.commit()
 
@@ -354,9 +362,18 @@ def delete_property(property_id):
             "error": "You can only delete your own property"
         }), 403
 
+    # Cascade clean up in FK order
+    booking_ids = [b.id for b in Booking.query.filter_by(property_id=property_id).all()]
+    if booking_ids:
+        Payment.query.filter(Payment.booking_id.in_(booking_ids)).delete(synchronize_session=False)
+        Message.query.filter(Message.booking_id.in_(booking_ids)).delete(synchronize_session=False)
+        Review.query.filter(Review.booking_id.in_(booking_ids)).delete(synchronize_session=False)
+        Booking.query.filter(Booking.id.in_(booking_ids)).delete(synchronize_session=False)
+    PropertyImage.query.filter_by(property_id=property_id).delete()
+    Message.query.filter_by(property_id=property_id).delete()
+    Review.query.filter_by(property_id=property_id).delete()
+
     db.session.delete(property)
     db.session.commit()
 
-    return jsonify({
-        "message": "Property deleted successfully"
-    }), 200
+    return jsonify({"message": "Property deleted successfully"}), 200

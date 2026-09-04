@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Check, MapPin, Plus, X } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000/api").replace(/\/$/, "");
 const TOKEN_KEY = "qrib_access_token";
@@ -24,6 +24,9 @@ export default function AddProperty() {
   const { user } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editId = searchParams.get("edit"); // property id when editing
+  const isEdit = !!editId;
 
   const [form, setForm] = useState({
     title: "",
@@ -50,6 +53,43 @@ export default function AddProperty() {
 
   const [amenities, setAmenities] = useState([]);
   const [locating, setLocating] = useState(false);
+
+  // Pre-fill form when editing an existing property
+  useEffect(() => {
+    if (!editId) return;
+    const token = localStorage.getItem(TOKEN_KEY);
+    fetch(`${API_URL}/properties/${editId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        const p = data.property || data;
+        setForm({
+          title: p.title || "",
+          area: p.area || "",
+          city: p.city || "Nairobi",
+          universityId: p.university_id || p.universityId || "",
+          pricePerMonth: p.price_per_month || p.pricePerMonth || "",
+          type: p.property_type || p.type || "Apartment",
+          bedrooms: String(p.bedrooms || "1"),
+          bathrooms: String(p.bathrooms || "1"),
+          furnished: p.furnished ?? true,
+          images: p.images?.length ? p.images : (p.image ? [p.image] : [""]),
+          image: p.image || "",
+          description: p.description || "",
+          distanceKm: p.distance_km || p.distanceKm || "",
+          waterCost: p.water_cost || p.waterCost || "",
+          electricityCost: p.electricity_cost || p.electricityCost || "",
+          latitude: p.latitude || "",
+          longitude: p.longitude || "",
+          semesterLabel: p.semester_label || p.semesterLabel || "",
+          availableFrom: p.available_from || p.availableFrom || "",
+          availableTo: p.available_to || p.availableTo || "",
+        });
+        if (p.amenities) setAmenities(p.amenities);
+      })
+      .catch(() => showToast("Could not load property details.", "error"));
+  }, [editId]);
 
   const update = (key) => (e) => {
     setForm((current) => ({
@@ -132,8 +172,8 @@ export default function AddProperty() {
     try {
       const token = localStorage.getItem(TOKEN_KEY);
 
-      const response = await fetch(`${API_URL}/properties`, {
-        method: "POST",
+      const response = await fetch(`${API_URL}/properties${isEdit ? `/${editId}` : ""}`, {
+        method: isEdit ? "PATCH" : "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -168,7 +208,7 @@ export default function AddProperty() {
         throw new Error(data.error || data.message || "Failed to publish property.");
       }
 
-      showToast("Property published successfully!", "success");
+      showToast(isEdit ? "Property updated successfully!" : "Property published successfully!", "success");
       navigate("/host/dashboard");
     } catch (err) {
       showToast(err.message || "Unable to connect to server.", "error");
@@ -192,7 +232,7 @@ export default function AddProperty() {
 
         <div className="mt-6">
           <h1 className="text-3xl font-extrabold text-ink">
-            Add a property
+            {isEdit ? "Edit property" : "Add a property"}
           </h1>
 
           <p className="text-muted mt-2">
@@ -594,7 +634,7 @@ export default function AddProperty() {
               disabled={submitting}
               className="bg-brand text-white px-7 py-3 rounded-lg font-extrabold hover:opacity-90 transition disabled:opacity-60"
             >
-              {submitting ? "Publishing…" : "Publish property"}
+              {submitting ? (isEdit ? "Saving…" : "Publishing…") : (isEdit ? "Save changes" : "Publish property")}
             </button>
           </div>
         </form>
