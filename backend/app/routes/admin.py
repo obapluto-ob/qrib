@@ -10,6 +10,7 @@ import threading
 from app.extensions import db
 from app.models import User, Property, Booking, Review, Notification, HostVerification, Payment, Message
 from app.services.email import send_verification_approved, send_verification_rejected, _send
+from app.routes.properties import property_to_dict
 
 admin_bp = Blueprint(
     "admin",
@@ -311,21 +312,9 @@ def get_moderation_queue():
 
     properties_data = []
     for prop in pagination.items:
-        properties_data.append({
-            "id": prop.id,
-            "title": prop.title,
-            "area": prop.area,
-            "city": prop.city,
-            "price_per_month": float(prop.price_per_month),
-            "property_type": prop.property_type,
-            "bedrooms": prop.bedrooms,
-            "bathrooms": prop.bathrooms,
-            "verified_host": prop.verified_host,
-            "host_id": prop.host_id,
-            "host_name": prop.host.name if prop.host else "Unknown",
-            "image": prop.image or "",
-            "created_at": prop.created_at.isoformat(),
-        })
+        d = property_to_dict(prop)
+        d["host_name"] = prop.host.name if prop.host else "Unknown"
+        properties_data.append(d)
 
     return jsonify({
         "data": properties_data,

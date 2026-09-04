@@ -2,9 +2,44 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
 import { useToast } from "../context/useToast";
-import { ChevronDown, Search, X, CheckCircle, AlertCircle, Trash2, Check } from "lucide-react";
+import { ChevronDown, Search, X, CheckCircle, AlertCircle, Trash2, Check, ChevronLeft, ChevronRight } from "lucide-react";
 
 const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000/api").replace(/\/$/, "");
+
+const fallbackImage = "https://images.unsplash.com/photo-1494526585095-c41746248156?w=800&q=80";
+
+function AdminPropertyImages({ prop }) {
+  const allImages = (prop.images?.length ? prop.images : [prop.image]).filter(Boolean);
+  const [idx, setIdx] = useState(0);
+  const src = allImages[idx] || fallbackImage;
+  return (
+    <div className="relative h-32 w-32 flex-shrink-0 rounded-lg overflow-hidden bg-slate-100">
+      <img
+        src={src}
+        alt={prop.title}
+        className="h-full w-full object-cover"
+        onError={(e) => { e.currentTarget.src = fallbackImage; }}
+      />
+      {allImages.length > 1 && (
+        <>
+          <button onClick={(e) => { e.stopPropagation(); setIdx((i) => (i - 1 + allImages.length) % allImages.length); }}
+            className="absolute left-0.5 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-0.5 text-white">
+            <ChevronLeft className="h-3 w-3" />
+          </button>
+          <button onClick={(e) => { e.stopPropagation(); setIdx((i) => (i + 1) % allImages.length); }}
+            className="absolute right-0.5 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-0.5 text-white">
+            <ChevronRight className="h-3 w-3" />
+          </button>
+          <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-0.5">
+            {allImages.map((_, i) => (
+              <span key={i} className={`block rounded-full ${ i === idx ? "h-1.5 w-3 bg-white" : "h-1.5 w-1.5 bg-white/50" }`} />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
 export default function AdminDashboard() {
   const { user, getToken } = useAuth();
@@ -456,9 +491,7 @@ export default function AdminDashboard() {
               {properties.map((prop) => (
                 <div key={prop.id} className="rounded-xl border border-slate-200 bg-white p-6">
                   <div className="flex gap-4">
-                    {prop.image && (
-                      <img src={prop.image} alt={prop.title} className="h-32 w-32 rounded-lg object-cover" />
-                    )}
+                    <AdminPropertyImages prop={prop} />
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <h3 className="text-lg font-bold text-slate-900">{prop.title}</h3>
