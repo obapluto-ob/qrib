@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, MapPin } from "lucide-react";
+import { Check, MapPin, Plus, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000/api").replace(/\/$/, "");
@@ -35,6 +35,7 @@ export default function AddProperty() {
     bedrooms: "1",
     bathrooms: "1",
     furnished: true,
+    images: [""],
     image: "",
     description: "",
     distanceKm: "",
@@ -118,9 +119,12 @@ export default function AddProperty() {
       return;
     }
 
-    if (!isValidImageValue(form.image)) {
-      showToast("Please enter a valid image URL, upload a valid image, or leave the image field empty.", "error");
-      return;
+    const validImages = form.images.filter((u) => u.trim());
+    for (const u of validImages) {
+      if (!isValidImageValue(u)) {
+        showToast("Please enter valid image URLs (must start with https://).", "error");
+        return;
+      }
     }
 
     setSubmitting(true);
@@ -145,7 +149,8 @@ export default function AddProperty() {
           bedrooms: Number(form.bedrooms),
           bathrooms: Number(form.bathrooms),
           furnished: form.furnished,
-          image: form.image ? form.image.trim() : null,
+          image: form.images[0]?.trim() || null,
+          images: form.images.filter((u) => u.trim()),
           distance_km: Number(form.distanceKm) || 0,
           water_cost: Number(form.waterCost) || 0,
           electricity_cost: Number(form.electricityCost) || 0,
@@ -476,18 +481,46 @@ export default function AddProperty() {
             <div className="space-y-5 mt-5">
               <div>
                 <label className="block text-sm font-semibold text-ink mb-2">
-                  Property image URL
+                  Property photos (up to 5)
                 </label>
-                <input
-                  type="text"
-                  value={form.image}
-                  onChange={update("image")}
-                  placeholder="https://res.cloudinary.com/... or https://i.ibb.co/..."
-                  className="w-full border border-slate-200 rounded-lg p-3.5"
-                />
-                <p className="text-xs text-muted mt-2">
-                  Upload your photo to <a href="https://imgbb.com" target="_blank" rel="noreferrer" className="text-blue-600 underline font-semibold">ImgBB</a> (free) or <a href="https://cloudinary.com" target="_blank" rel="noreferrer" className="text-blue-600 underline font-semibold">Cloudinary</a> and paste the direct image link here.
+                <p className="text-xs text-muted mb-3">
+                  Upload photos to <a href="https://imgbb.com" target="_blank" rel="noreferrer" className="text-blue-600 underline font-semibold">ImgBB</a> (free) and paste the direct links below. First photo is the cover.
                 </p>
+                <div className="space-y-2">
+                  {form.images.map((url, idx) => (
+                    <div key={idx} className="flex gap-2 items-center">
+                      <input
+                        type="text"
+                        value={url}
+                        onChange={(e) => {
+                          const next = [...form.images];
+                          next[idx] = e.target.value;
+                          setForm((f) => ({ ...f, images: next }));
+                        }}
+                        placeholder={idx === 0 ? "Cover photo URL (required)" : `Photo ${idx + 1} URL`}
+                        className="flex-1 border border-slate-200 rounded-lg p-3.5 text-sm"
+                      />
+                      {form.images.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => setForm((f) => ({ ...f, images: f.images.filter((_, i) => i !== idx) }))}
+                          className="p-2 text-slate-400 hover:text-red-500"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {form.images.length < 5 && (
+                  <button
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, images: [...f.images, ""] }))}
+                    className="mt-2 flex items-center gap-1.5 text-sm font-semibold text-brand hover:underline"
+                  >
+                    <Plus className="h-4 w-4" /> Add another photo
+                  </button>
+                )}
               </div>
 
               <div>

@@ -524,7 +524,7 @@ export default function AdminDashboard() {
           <div className="max-w-2xl space-y-6">
             <div>
               <h2 className="text-xl font-black text-slate-900">Send Email</h2>
-              <p className="mt-1 text-sm text-slate-500">Compose and send emails to users via Resend.</p>
+              <p className="mt-1 text-sm text-slate-500">Compose and send emails to users.</p>
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-white p-6 space-y-5">

@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
-import { CalendarDays, ShieldCheck, Star } from "lucide-react";
+import { useState } from "react";
+import { CalendarDays, ShieldCheck, Star, ChevronLeft, ChevronRight } from "lucide-react";
 import { getUniversity } from "../data/universities";
 import WalkingTime from "./WalkingTime";
 import { TrustBadge } from "./TrustScore";
@@ -23,7 +24,11 @@ function getSafeImageUrl(imageUrl) {
 
 export default function PropertyCard({ listing, affordability }) {
   const uni = getUniversity(listing.universityId);
-  const imageSrc = getSafeImageUrl(listing.image);
+  const allImages = (listing.images?.length ? listing.images : [listing.image]).map(getSafeImageUrl);
+  const [imgIdx, setImgIdx] = useState(0);
+
+  const prev = (e) => { e.preventDefault(); setImgIdx((i) => (i - 1 + allImages.length) % allImages.length); };
+  const next = (e) => { e.preventDefault(); setImgIdx((i) => (i + 1) % allImages.length); };
 
   return (
     <Link
@@ -32,14 +37,32 @@ export default function PropertyCard({ listing, affordability }) {
     >
       <div className="relative h-[220px] overflow-hidden">
         <img
-          src={imageSrc}
+          src={allImages[imgIdx]}
           alt={listing.title}
           loading="lazy"
-          onError={(event) => {
-            event.currentTarget.src = fallbackImage;
-          }}
+          onError={(event) => { event.currentTarget.src = fallbackImage; }}
           className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
         />
+
+        {allImages.length > 1 && (
+          <>
+            <button onClick={prev} className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/40 p-1 text-white hover:bg-black/60">
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button onClick={next} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/40 p-1 text-white hover:bg-black/60">
+              <ChevronRight className="h-4 w-4" />
+            </button>
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+              {allImages.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={(e) => { e.preventDefault(); setImgIdx(i); }}
+                  className={`h-1.5 rounded-full transition-all ${ i === imgIdx ? "w-4 bg-white" : "w-1.5 bg-white/50" }`}
+                />
+              ))}
+            </div>
+          </>
+        )}
 
         {listing.verifiedHost && (
           <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-bold text-brand">

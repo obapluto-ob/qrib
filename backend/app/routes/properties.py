@@ -7,6 +7,7 @@ from sqlalchemy import func
 
 from app.extensions import db
 from app.models import Property, User, University
+from app.models.property_image import PropertyImage
 
 
 properties_bp = Blueprint(
@@ -50,6 +51,7 @@ def property_to_dict(property):
         "host_id": property.host_id,
         "university_id": property.university_id,
         "created_at": property.created_at.isoformat(),
+        "images": [img.image_url for img in (property.images or [])],
     }
 
 
@@ -191,6 +193,13 @@ def create_property():
     )
 
     db.session.add(property)
+    db.session.flush()
+
+    extra_images = data.get("images", [])
+    for url in extra_images[:5]:
+        if url and url.strip():
+            db.session.add(PropertyImage(property_id=property.id, image_url=url.strip()))
+
     db.session.commit()
 
     return jsonify({
