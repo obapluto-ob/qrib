@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check } from "lucide-react";
+import { Check, MapPin } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000/api").replace(/\/$/, "");
@@ -48,6 +48,7 @@ export default function AddProperty() {
   });
 
   const [amenities, setAmenities] = useState([]);
+  const [locating, setLocating] = useState(false);
 
   const update = (key) => (e) => {
     setForm((current) => ({
@@ -359,27 +360,34 @@ export default function AddProperty() {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-ink mb-2">Latitude</label>
-                <input
-                  type="number" step="any"
-                  value={form.latitude}
-                  onChange={update("latitude")}
-                  placeholder="-1.2921"
-                  className="w-full border border-slate-200 rounded-lg p-3.5"
-                />
-                <p className="text-xs text-muted mt-1">Find on Google Maps — right-click your property</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-ink mb-2">Longitude</label>
-                <input
-                  type="number" step="any"
-                  value={form.longitude}
-                  onChange={update("longitude")}
-                  placeholder="36.8219"
-                  className="w-full border border-slate-200 rounded-lg p-3.5"
-                />
+              <div className="md:col-span-2">
+                <label className="block text-sm font-semibold text-ink mb-2">Property location</label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!navigator.geolocation) return;
+                    setLocating(true);
+                    navigator.geolocation.getCurrentPosition(
+                      (pos) => {
+                        setForm((f) => ({
+                          ...f,
+                          latitude: pos.coords.latitude.toFixed(6),
+                          longitude: pos.coords.longitude.toFixed(6),
+                        }));
+                        setLocating(false);
+                      },
+                      () => {
+                        showToast("Could not get location. Enter coordinates manually.", "error");
+                        setLocating(false);
+                      }
+                    );
+                  }}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-brand text-brand text-sm font-semibold hover:bg-brand/5 transition"
+                >
+                  <MapPin className="h-4 w-4" />
+                  {locating ? "Detecting…" : form.latitude ? `${form.latitude}, ${form.longitude}` : "Detect my location"}
+                </button>
+                <p className="text-xs text-muted mt-1">Stand at the property and tap — uses your device GPS for accurate walking time calculation.</p>
               </div>
 
               <div>
