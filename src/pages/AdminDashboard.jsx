@@ -2,7 +2,185 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
 import { useToast } from "../context/useToast";
-import { ChevronDown, Search, X, CheckCircle, AlertCircle, Trash2, Check, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronDown, Search, X, CheckCircle, AlertCircle, Trash2, Check, ChevronLeft, ChevronRight, MessageSquare, Clock, CheckCheck } from "lucide-react";
+
+// ============================================================
+// SUPPORT ADMIN PANEL COMPONENT
+// ============================================================
+function SupportAdminPanel({ API_URL, getToken, showToast }) {
+  const [tickets, setTickets] = useState([]);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [replyModal, setReplyModal] = useState(null); // { id, subject }
+  const [replyText, setReplyText] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const fetchTickets = async () => {
+    try {
+      const res = await fetch(`${API_URL}/support?status=${statusFilter}`, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      if (res.ok) setTickets(await res.json());
+    } catch {}
+  };
+
+  useEffect(() => { fetchTickets(); }, [statusFilter]);
+
+  const sendReply = async () => {
+    if (!replyModal || !replyText.trim()) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/support/${replyModal.id}/reply`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${getToken()}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ reply: replyText.trim() }),
+      });
+      if (!res.ok) throw new Error();
+      showToast("Reply sent", "success");
+      setReplyModal(null);
+      setReplyText("");
+      fetchTickets();
+    } catch { showToast("Failed to send reply", "error"); }
+    finally { setLoading(false); }
+  };
+
+  const updateStatus = async (id, status) => {
+    try {
+      const res = await fetch(`${API_URL}/support/${id}/status`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${getToken()}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (!res.ok) throw new Error();
+      showToast(`Ticket marked as ${status}`, "success");
+      fetchTickets();
+    } catch { showToast("Failed to update status", "error"); }
+  };
+
+  const statusBadge = (s) => {
+    const map = {
+      open: "bg-amber-100 text-amber-700",
+      in_review: "bg-blue-100 text-blue-700",
+      resolved: "bg-green-100 text-green-700",
+      closed: "bg-slate-100 text-slate-600",
+    };
+    return map[s] || map.open;
+  };
+
+  const categoryBadge = (c) => {
+    const map = {
+      payment: "bg-purple-100 text-purple-700",
+      booking: "bg-blue-100 text-blue-700",
+      property: "bg-orange-100 text-orange-700",
+      general: "bg-slate-100 text-slate-600",
+      other: "bg-slate-100 text-slate-600",
+    };
+    return map[c] || map.general;
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold">Support Tickets</h2>
+        <div className="flex gap-2">
+          {["all", "open", "in_review", "resolved", "closed"].map((s) => (
+            <button
+              key={s}
+              onClick={() => setStatusFilter(s)}
+              className={`rounded-lg px-3 py-1.5 text-xs font-bold capitalize ${
+                statusFilter === s ? "bg-blue-600 text-white" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              {s.replace("_", " ")}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {tickets.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-slate-200 bg-white p-12 text-center text-slate-400">
+          No tickets found.
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {tickets.map((t) => (
+            <div key={t.id} className="rounded-xl border border-slate-200 bg-white p-5">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold capitalize ${statusBadge(t.status)}`}>{t.status.replace("_", " ")}</span>
+                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold capitalize ${categoryBadge(t.category)}`}>{t.category}</span>
+                    {t.booking_property && <span className="text-xs text-slate-400">re: {t.booking_property}</span>}
+                  </div>
+                  <p className="mt-2 font-bold text-slate-900">{t.subject}</p>
+                  <p className="mt-1 text-sm text-slate-600">{t.message}</p>
+                  <p className="mt-2 text-xs text-slate-400">
+                    {t.user_name} · {t.user_email} · {new Date(t.created_at).toLocaleDateString()}
+                  </p>
+                  {t.admin_reply && (
+                    <div className="mt-3 rounded-lg bg-blue-50 border border-blue-100 p-3">
+                      <p className="text-xs font-bold text-blue-700 mb-1">Admin reply</p>
+                      <p className="text-sm text-blue-900">{t.admin_reply}</p>
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-col gap-2 shrink-0">
+                  <button
+                    onClick={() => { setReplyModal({ id: t.id, subject: t.subject }); setReplyText(t.admin_reply || ""); }}
+                    className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700"
+                  >
+                    <MessageSquare className="h-3.5 w-3.5" />
+                    {t.admin_reply ? "Edit reply" : "Reply"}
+                  </button>
+                  {t.status !== "resolved" && (
+                    <button
+                      onClick={() => updateStatus(t.id, "resolved")}
+                      className="flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-green-700"
+                    >
+                      <CheckCheck className="h-3.5 w-3.5" />
+                      Resolve
+                    </button>
+                  )}
+                  {t.status !== "closed" && (
+                    <button
+                      onClick={() => updateStatus(t.id, "closed")}
+                      className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-50"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                      Close
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Reply Modal */}
+      {replyModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
+            <h3 className="text-lg font-bold text-slate-900">Reply to ticket</h3>
+            <p className="mt-1 text-sm text-slate-500">{replyModal.subject}</p>
+            <textarea
+              rows={5}
+              value={replyText}
+              onChange={(e) => setReplyText(e.target.value)}
+              placeholder="Type your reply..."
+              className="mt-4 w-full rounded-xl border border-slate-200 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+            />
+            <div className="mt-4 flex gap-3 justify-end">
+              <button onClick={() => { setReplyModal(null); setReplyText(""); }} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50">Cancel</button>
+              <button onClick={sendReply} disabled={loading || !replyText.trim()} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-50">
+                {loading ? "Sending…" : "Send reply"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000/api").replace(/\/$/, "");
 
@@ -386,6 +564,7 @@ export default function AdminDashboard() {
             { id: "properties", label: "Properties" },
             { id: "verifications", label: "Verifications" },
             { id: "transactions", label: "Transactions" },
+            { id: "support", label: "Support" },
             { id: "emails", label: "Send Emails" },
           ].map((tab) => (
             <button
@@ -778,6 +957,11 @@ export default function AdminDashboard() {
               </table>
             </div>
           </div>
+        )}
+
+        {/* Support Tickets Tab */}
+        {activeTab === "support" && (
+          <SupportAdminPanel API_URL={API_URL} getToken={getToken} showToast={showToast} />
         )}
 
         {/* Emails Tab */}

@@ -9,7 +9,7 @@ import threading
 import requests
 
 from app.extensions import db
-from app.models import User, Property, Booking, Review, Notification, HostVerification, Payment, Message, Payout, PropertyImage
+from app.models import User, Property, Booking, Review, Notification, HostVerification, Payment, Message, Payout, PropertyImage, SupportTicket
 from app.services.email import send_verification_approved, send_verification_rejected, _send
 from app.routes.properties import property_to_dict
 
@@ -321,7 +321,10 @@ def delete_user(user_id):
         # 11. Delete Host Verification
         HostVerification.query.filter_by(host_id=user_id).delete(synchronize_session=False)
 
-        # 12. Finally delete the user
+        # 12. Delete support tickets
+        SupportTicket.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+
+        # 13. Finally delete the user
         db.session.delete(user)
         db.session.commit()
 

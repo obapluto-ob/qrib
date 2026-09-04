@@ -51,6 +51,7 @@ from .routes.messages import messages_bp
 from .routes.host_verification import host_verification_bp
 from .routes.notifications import notifications_bp
 from .routes.trust_score import trust_score_bp
+from .routes.support import support_bp
 
 
 load_dotenv()
@@ -254,6 +255,7 @@ def create_app():
     app.register_blueprint(host_verification_bp)
     app.register_blueprint(notifications_bp)
     app.register_blueprint(trust_score_bp)
+    app.register_blueprint(support_bp)
 
     # ============================================================
     # FLASK SHELL

@@ -5,6 +5,7 @@ import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import PropertyCard from "../components/PropertyCard";
 import { useAuth } from "../context/useAuth";
+import { useToast } from "../context/useToast";
 
 const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000/api").replace(/\/$/, "");
 
@@ -96,6 +97,120 @@ function loadSavedListings() {
 /* =========================================================
    STUDENT DASHBOARD
 ========================================================= */
+
+function SupportTicketSection({ API_URL, TOKEN_KEY }) {
+  const [tickets, setTickets] = useState([]);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ subject: "", message: "", category: "general" });
+  const [submitting, setSubmitting] = useState(false);
+  const { showToast } = useToast();
+
+  const fetchTickets = async () => {
+    try {
+      const token = localStorage.getItem(TOKEN_KEY);
+      const res = await fetch(`${API_URL}/support`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) setTickets(await res.json());
+    } catch {}
+  };
+
+  useEffect(() => { fetchTickets(); }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.subject.trim() || !form.message.trim()) {
+      showToast("Subject and message are required", "error"); return;
+    }
+    setSubmitting(true);
+    try {
+      const token = localStorage.getItem(TOKEN_KEY);
+      const res = await fetch(`${API_URL}/support`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      if (!res.ok) throw new Error();
+      showToast("Support ticket submitted", "success");
+      setForm({ subject: "", message: "", category: "general" });
+      setShowForm(false);
+      fetchTickets();
+    } catch { showToast("Failed to submit ticket", "error"); }
+    finally { setSubmitting(false); }
+  };
+
+  const statusColor = { open: "bg-amber-100 text-amber-700", in_review: "bg-blue-100 text-blue-700", resolved: "bg-green-100 text-green-700", closed: "bg-slate-100 text-slate-500" };
+
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-white p-6">
+      <div className="flex items-center justify-between">
+        <h3 className="font-black text-slate-900">Support</h3>
+        <button
+          onClick={() => setShowForm((v) => !v)}
+          className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700"
+        >
+          {showForm ? "Cancel" : "Raise a ticket"}
+        </button>
+      </div>
+
+      {showForm && (
+        <form onSubmit={handleSubmit} className="mt-4 space-y-3">
+          <select
+            value={form.category}
+            onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+            className="w-full rounded-lg border border-slate-200 p-2.5 text-sm"
+          >
+            <option value="general">General</option>
+            <option value="booking">Booking issue</option>
+            <option value="payment">Payment issue</option>
+            <option value="property">Property issue</option>
+            <option value="other">Other</option>
+          </select>
+          <input
+            type="text"
+            placeholder="Subject"
+            value={form.subject}
+            onChange={(e) => setForm((f) => ({ ...f, subject: e.target.value }))}
+            className="w-full rounded-lg border border-slate-200 p-2.5 text-sm"
+          />
+          <textarea
+            rows={4}
+            placeholder="Describe your issue..."
+            value={form.message}
+            onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))}
+            className="w-full rounded-lg border border-slate-200 p-2.5 text-sm"
+          />
+          <button
+            type="submit"
+            disabled={submitting}
+            className="w-full rounded-lg bg-blue-600 py-2.5 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            {submitting ? "Submitting…" : "Submit ticket"}
+          </button>
+        </form>
+      )}
+
+      {tickets.length > 0 && (
+        <div className="mt-4 space-y-2">
+          {tickets.map((t) => (
+            <div key={t.id} className="rounded-xl border border-slate-100 p-3">
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-sm font-bold text-slate-800 truncate">{t.subject}</p>
+                <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-bold capitalize ${statusColor[t.status] || statusColor.open}`}>
+                  {t.status.replace("_", " ")}
+                </span>
+              </div>
+              {t.admin_reply && (
+                <p className="mt-1.5 text-xs text-blue-700 bg-blue-50 rounded-lg p-2">
+                  <span className="font-bold">Admin: </span>{t.admin_reply}
+                </p>
+              )}
+              <p className="mt-1 text-xs text-slate-400">{new Date(t.created_at).toLocaleDateString()}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
 
 export default function StudentDashboard() {
   const { user } = useAuth();
@@ -1076,6 +1191,10 @@ export default function StudentDashboard() {
                   )}
                 </div>
               </section>
+
+              {/* SUPPORT TICKET */}
+              <SupportTicketSection API_URL={API_URL} TOKEN_KEY={TOKEN_KEY} />
+
             </aside>
           </div>
 

@@ -9,3 +9,4 @@ from .notification import Notification
 from .host_verification import HostVerification
 from .review import Review
 from .payout import Payout
+from .support_ticket import SupportTicket
