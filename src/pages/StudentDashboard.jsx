@@ -907,6 +907,27 @@ export default function StudentDashboard() {
                           <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-bold ${cfg.color}`}>
                             {cfg.label}
                           </span>
+                          {(b.status === "approved" || b.status === "pending") && !b.paid && (
+                            <button
+                              onClick={async () => {
+                                if (!window.confirm("Cancel this booking?")) return;
+                                try {
+                                  const token = localStorage.getItem("qrib_access_token");
+                                  const res = await fetch(`${API_URL}/bookings/${b.id}`, {
+                                    method: "PATCH",
+                                    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                                    body: JSON.stringify({ status: "cancelled" }),
+                                  });
+                                  if (res.ok) {
+                                    setBookings((prev) => prev.map((bk) => bk.id === b.id ? { ...bk, status: "cancelled" } : bk));
+                                  }
+                                } catch {}
+                              }}
+                              className="shrink-0 rounded-lg border border-red-200 px-2 py-0.5 text-xs font-bold text-red-600 hover:bg-red-50"
+                            >
+                              Cancel
+                            </button>
+                          )}
                         </div>
                       );
                     })}
