@@ -294,21 +294,26 @@ def upgrade_to_host():
 # =========================
 @auth_bp.post("/forgot-password")
 def forgot_password():
-    data = request.get_json() or {}
-    email = data.get("email", "").strip().lower()
-    if not email:
-        return jsonify({"error": "Email is required"}), 400
+    try:
+        data = request.get_json() or {}
+        email = data.get("email", "").strip().lower()
+        if not email:
+            return jsonify({"error": "Email is required"}), 400
 
-    user = User.query.filter_by(email=email).first()
-    if user:
-        token = secrets.token_urlsafe(32)
-        user.reset_token = token
-        user.reset_token_expires = datetime.now(timezone.utc) + timedelta(hours=1)
-        db.session.commit()
-        send_password_reset(user.email, user.name, token)
+        user = User.query.filter_by(email=email).first()
+        if user:
+            token = secrets.token_urlsafe(32)
+            user.reset_token = token
+            user.reset_token_expires = datetime.now(timezone.utc) + timedelta(hours=1)
+            db.session.commit()
+            try:
+                send_password_reset(user.email, user.name, token)
+            except Exception:
+                pass
 
-    # Always 200 to avoid email enumeration
-    return jsonify({"message": "If that email exists, a reset link has been sent."}), 200
+        return jsonify({"message": "If that email exists, a reset link has been sent."}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 # =========================
