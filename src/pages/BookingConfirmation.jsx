@@ -58,6 +58,12 @@ export default function BookingConfirmation() {
       return;
     }
 
+    const today = addDays(0);
+    if (!moveInDate || moveInDate < today) {
+      showToast("Please select a valid move-in date (today or later).", "error");
+      return;
+    }
+
     setSubmitting(true);
     try {
       const res = await fetch(`${API_URL}/bookings`, {
@@ -193,8 +199,11 @@ export default function BookingConfirmation() {
               <input
                 type="date"
                 value={moveInDate}
-                min={addDays(1)}
-                onChange={(e) => setMoveInDate(e.target.value)}
+                min={addDays(0)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setMoveInDate(val < addDays(0) ? addDays(0) : val);
+                }}
                 className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-900 focus:border-blue-500 focus:outline-none"
               />
             </div>

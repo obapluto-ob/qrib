@@ -155,7 +155,7 @@ function ErrorState({ error }) {
                 type="date"
                 value={moveInDate}
                 min={new Date().toISOString().split("T")[0]}
-                onChange={(event) => setMoveInDate(event.target.value)}
+                onChange={(event) => { const v = event.target.value; const t = new Date().toISOString().split("T")[0]; setMoveInDate(v < t ? t : v); }}
                 className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
               />
             </label>
@@ -268,6 +268,11 @@ export default function AccommodationDetails() {
     }
     if (!moveInDate) {
       showToast("Please select a move-in date.", "error");
+      return;
+    }
+    const today = new Date().toISOString().split("T")[0];
+    if (moveInDate < today) {
+      showToast("Move-in date cannot be in the past.", "error");
       return;
     }
     setBookingLoading(true);
@@ -766,7 +771,7 @@ export default function AccommodationDetails() {
                 type="date"
                 value={moveInDate}
                 min={new Date().toISOString().split("T")[0]}
-                onChange={(event) => setMoveInDate(event.target.value)}
+                onChange={(event) => { const v = event.target.value; const t = new Date().toISOString().split("T")[0]; setMoveInDate(v < t ? t : v); }}
                 className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
               />
             </label>
