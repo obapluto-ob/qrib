@@ -44,7 +44,7 @@ class Booking(db.Model):
         back_populates="bookings",
     )
 
-    payments = db.relationship(
+    payment = db.relationship(
         "Payment",
         back_populates="booking",
         uselist=False,

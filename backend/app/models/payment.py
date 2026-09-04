@@ -50,6 +50,6 @@ class Payment(db.Model):
         nullable=False,
     )
 
-    booking = db.relationship("Booking", back_populates="payments")
+    booking = db.relationship("Booking", back_populates="payment")
     student = db.relationship("User", back_populates="payments")
     property = db.relationship("Property", back_populates="payments")
