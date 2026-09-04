@@ -71,6 +71,8 @@ def create_booking():
         return jsonify({"error": "Invalid move_in_date format. Use YYYY-MM-DD"}), 400
     if move_in_date < date.today():
         return jsonify({"error": "Move-in date cannot be in the past."}), 400
+    if move_in_date.year > date.today().year + 2:
+        return jsonify({"error": "Move-in date is too far in the future."}), 400
 
     booking = Booking(
         property_id=property_id,
