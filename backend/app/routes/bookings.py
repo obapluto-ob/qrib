@@ -1,4 +1,5 @@
 from datetime import date
+import threading
 
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
@@ -82,10 +83,10 @@ def create_booking():
     # Email host about new booking request
     host = db.session.get(User, property.host_id)
     if host:
-        send_booking_request(
+        threading.Thread(target=send_booking_request, args=(
             host.email, host.name, student.name,
             property.title, str(move_in_date), booking.id
-        )
+        ), daemon=True).start()
 
     return jsonify({
         "message": "Booking created successfully",
@@ -237,12 +238,14 @@ def respond_booking(booking_id):
     prop = booking.property
     if student and prop:
         if action == "approve":
-            send_booking_approved(
+            threading.Thread(target=send_booking_approved, args=(
                 student.email, student.name, prop.title,
                 str(booking.move_in_date), booking.id
-            )
+            ), daemon=True).start()
         else:
-            send_booking_rejected(student.email, student.name, prop.title)
+            threading.Thread(target=send_booking_rejected, args=(
+                student.email, student.name, prop.title
+            ), daemon=True).start()
 
     return jsonify({"booking": booking_to_dict(booking)}), 200
 

@@ -1,5 +1,6 @@
 import os
 import secrets
+import threading
 from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, request, jsonify
@@ -122,7 +123,7 @@ def register():
     db.session.add(user)
     db.session.commit()
 
-    send_welcome(user.email, user.name, user.role)
+    threading.Thread(target=send_welcome, args=(user.email, user.name, user.role), daemon=True).start()
 
     access_token = create_access_token(identity=str(user.id))
     return jsonify({
@@ -251,7 +252,7 @@ def google_auth():
     db.session.add(user)
     db.session.commit()
 
-    send_welcome(user.email, user.name, user.role)
+    threading.Thread(target=send_welcome, args=(user.email, user.name, user.role), daemon=True).start()
 
     access_token = create_access_token(identity=str(user.id))
     return jsonify({
@@ -309,10 +310,7 @@ def forgot_password():
             user.reset_token = token
             user.reset_token_expires = datetime.now(timezone.utc) + timedelta(hours=1)
             db.session.commit()
-            try:
-                send_password_reset(user.email, user.name, token)
-            except Exception:
-                pass
+            threading.Thread(target=send_password_reset, args=(user.email, user.name, token), daemon=True).start()
 
         return jsonify({"message": "If that email exists, a reset link has been sent."}), 200
     except Exception as e:

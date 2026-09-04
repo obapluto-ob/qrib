@@ -5,6 +5,7 @@ from sqlalchemy import func, desc, text
 from datetime import datetime, timezone
 import os
 import functools
+import threading
 
 from app.extensions import db
 from app.models import User, Property, Booking, Review, Notification, HostVerification, Payment, Message
@@ -465,7 +466,7 @@ def approve_verification(verification_id):
     # Email host
     host = db.session.get(User, verification.host_id)
     if host:
-        send_verification_approved(host.email, host.name)
+        threading.Thread(target=send_verification_approved, args=(host.email, host.name), daemon=True).start()
 
     return jsonify({
         "message": "Verification approved successfully",
@@ -506,7 +507,7 @@ def reject_verification(verification_id):
     # Email host
     host = db.session.get(User, verification.host_id)
     if host:
-        send_verification_rejected(host.email, host.name, notes)
+        threading.Thread(target=send_verification_rejected, args=(host.email, host.name, notes), daemon=True).start()
 
     return jsonify({
         "message": "Verification rejected successfully",

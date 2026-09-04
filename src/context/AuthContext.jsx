@@ -247,7 +247,7 @@ export function AuthProvider({ children }) {
         }),
       });
 
-      const data = await response.json();
+      const data = await readApiResponse(response);
 
       if (!response.ok) {
         return {
