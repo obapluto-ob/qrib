@@ -9,7 +9,7 @@ import threading
 import requests
 
 from app.extensions import db
-from app.models import User, Property, Booking, Review, Notification, HostVerification, Payment, Message, Payout
+from app.models import User, Property, Booking, Review, Notification, HostVerification, Payment, Message, Payout, PropertyImage
 from app.services.email import send_verification_approved, send_verification_rejected, _send
 from app.routes.properties import property_to_dict
 
@@ -268,25 +268,40 @@ def delete_user(user_id):
     if not user:
         return jsonify({"error": "User not found"}), 404
     
-    # Delete related data
+    # Delete messages involving this user
     Message.query.filter(
         db.or_(Message.sender_id == user_id, Message.receiver_id == user_id)
     ).delete()
-    
     Notification.query.filter(Notification.user_id == user_id).delete()
-    
-    if user.role == "host":
-        Property.query.filter(Property.host_id == user_id).delete()
-        HostVerification.query.filter(HostVerification.host_id == user_id).delete()
-    
-    if user.role == "student":
-        Booking.query.filter(Booking.student_id == user_id).delete()
-    
     Review.query.filter(Review.user_id == user_id).delete()
-    
+
+    if user.role == "host":
+        property_ids = [p.id for p in Property.query.filter_by(host_id=user_id).all()]
+        if property_ids:
+            # Clean up everything linked to host's properties
+            booking_ids = [b.id for b in Booking.query.filter(Booking.property_id.in_(property_ids)).all()]
+            if booking_ids:
+                Payment.query.filter(Payment.booking_id.in_(booking_ids)).delete(synchronize_session=False)
+                Message.query.filter(Message.booking_id.in_(booking_ids)).delete(synchronize_session=False)
+                Review.query.filter(Review.booking_id.in_(booking_ids)).delete(synchronize_session=False)
+                Booking.query.filter(Booking.id.in_(booking_ids)).delete(synchronize_session=False)
+            PropertyImage.query.filter(PropertyImage.property_id.in_(property_ids)).delete(synchronize_session=False)
+            Message.query.filter(Message.property_id.in_(property_ids)).delete(synchronize_session=False)
+            Review.query.filter(Review.property_id.in_(property_ids)).delete(synchronize_session=False)
+            Property.query.filter(Property.id.in_(property_ids)).delete(synchronize_session=False)
+        HostVerification.query.filter_by(host_id=user_id).delete()
+
+    if user.role == "student":
+        booking_ids = [b.id for b in Booking.query.filter_by(student_id=user_id).all()]
+        if booking_ids:
+            Payment.query.filter(Payment.booking_id.in_(booking_ids)).delete(synchronize_session=False)
+            Message.query.filter(Message.booking_id.in_(booking_ids)).delete(synchronize_session=False)
+            Review.query.filter(Review.booking_id.in_(booking_ids)).delete(synchronize_session=False)
+            Booking.query.filter(Booking.id.in_(booking_ids)).delete(synchronize_session=False)
+
     db.session.delete(user)
     db.session.commit()
-    
+
     return jsonify({"message": "User deleted successfully"}), 200
 
 
