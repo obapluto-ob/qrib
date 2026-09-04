@@ -22,6 +22,9 @@ export default function AdminDashboard() {
   const [emailForm, setEmailForm] = useState({ audience: "all", to_email: "", subject: "", body: "" });
   const [emailSending, setEmailSending] = useState(false);
   const [emailResult, setEmailResult] = useState(null);
+  const [propertyStatusFilter, setPropertyStatusFilter] = useState("all");
+  const [deleteModal, setDeleteModal] = useState(null); // { id, title }
+  const [deleteReason, setDeleteReason] = useState("");
 
   // Fetch dashboard stats
   useEffect(() => {
@@ -42,7 +45,7 @@ export default function AdminDashboard() {
     if (activeTab === "properties") {
       fetchProperties();
     }
-  }, [activeTab, currentPage]);
+  }, [activeTab, currentPage, propertyStatusFilter]);
 
   // Fetch verifications
   useEffect(() => {
@@ -97,7 +100,7 @@ export default function AdminDashboard() {
   const fetchProperties = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_URL}/admin/properties/moderation?page=${currentPage}&limit=10`, {
+      const response = await fetch(`${API_URL}/admin/properties/moderation?page=${currentPage}&limit=10&status=${propertyStatusFilter}`, {
         headers: { Authorization: `Bearer ${getToken()}` },
       });
       if (response.ok) {
@@ -147,14 +150,17 @@ export default function AdminDashboard() {
     }
   };
 
-  const deleteProperty = async (propertyId) => {
+  const deleteProperty = async (propertyId, reason) => {
     try {
       const response = await fetch(`${API_URL}/admin/properties/${propertyId}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${getToken()}` },
+        headers: { Authorization: `Bearer ${getToken()}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ reason }),
       });
       if (response.ok) {
-        showToast("Property deleted successfully", "success");
+        showToast("Property deleted — host notified", "success");
+        setDeleteModal(null);
+        setDeleteReason("");
         fetchProperties();
       }
     } catch (error) {
@@ -424,44 +430,64 @@ export default function AdminDashboard() {
         {/* Properties Tab */}
         {activeTab === "properties" && (
           <div className="space-y-6">
-            <h2 className="text-xl font-bold">Properties Awaiting Verification</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold">Properties</h2>
+              <div className="flex gap-2">
+                {["all", "pending", "approved"].map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => { setPropertyStatusFilter(s); setCurrentPage(1); }}
+                    className={`rounded-lg px-4 py-2 text-sm font-bold capitalize ${
+                      propertyStatusFilter === s
+                        ? "bg-blue-600 text-white"
+                        : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                    }`}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="space-y-4">
+              {properties.length === 0 && (
+                <p className="text-sm text-slate-500">No properties found.</p>
+              )}
               {properties.map((prop) => (
                 <div key={prop.id} className="rounded-xl border border-slate-200 bg-white p-6">
                   <div className="flex gap-4">
                     {prop.image && (
-                      <img
-                        src={prop.image}
-                        alt={prop.title}
-                        className="h-32 w-32 rounded-lg object-cover"
-                      />
+                      <img src={prop.image} alt={prop.title} className="h-32 w-32 rounded-lg object-cover" />
                     )}
                     <div className="flex-1">
-                      <h3 className="text-lg font-bold text-slate-900">{prop.title}</h3>
-                      <p className="text-sm text-slate-600">
-                        {prop.area}, {prop.city}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-lg font-bold text-slate-900">{prop.title}</h3>
+                        <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                          prop.verified_host
+                            ? "bg-green-100 text-green-700"
+                            : "bg-amber-100 text-amber-700"
+                        }`}>
+                          {prop.verified_host ? "Approved" : "Pending"}
+                        </span>
+                      </div>
+                      <p className="text-sm text-slate-600">{prop.area}, {prop.city}</p>
                       <p className="mt-2 text-sm font-semibold text-slate-800">
                         Ksh {parseFloat(prop.price_per_month).toLocaleString()}/month
                       </p>
-                      <p className="text-xs text-slate-500 mt-1">
-                        Host: {prop.host_name}
-                      </p>
+                      <p className="text-xs text-slate-500 mt-1">Host: {prop.host_name}</p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-col gap-2">
+                      {!prop.verified_host && (
+                        <button
+                          onClick={() => approveProperty(prop.id)}
+                          className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-bold text-white hover:bg-green-700"
+                        >
+                          <CheckCircle className="h-4 w-4" />
+                          Approve
+                        </button>
+                      )}
                       <button
-                        onClick={() => approveProperty(prop.id)}
-                        className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-bold text-white hover:bg-green-700"
-                      >
-                        <CheckCircle className="h-4 w-4" />
-                        Approve
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (window.confirm("Are you sure you want to delete this property?")) {
-                            deleteProperty(prop.id);
-                          }
-                        }}
+                        onClick={() => { setDeleteModal({ id: prop.id, title: prop.title }); setDeleteReason(""); }}
                         className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-700"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -600,6 +626,42 @@ export default function AdminDashboard() {
           </div>
         )}
       </main>
+
+      {/* Delete Property Modal */}
+      {deleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <h3 className="text-lg font-black text-slate-900">Delete property</h3>
+            <p className="mt-1 text-sm text-slate-600">
+              You are about to delete <span className="font-semibold">{deleteModal.title}</span>. The host will be notified.
+            </p>
+            <div className="mt-4">
+              <label className="block text-sm font-bold text-slate-700 mb-2">Reason (shown to host)</label>
+              <textarea
+                rows={3}
+                value={deleteReason}
+                onChange={(e) => setDeleteReason(e.target.value)}
+                placeholder="e.g. Listing violates platform guidelines"
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-red-400 resize-none"
+              />
+            </div>
+            <div className="mt-5 flex gap-3 justify-end">
+              <button
+                onClick={() => { setDeleteModal(null); setDeleteReason(""); }}
+                className="rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => deleteProperty(deleteModal.id, deleteReason)}
+                className="rounded-xl bg-red-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-red-700"
+              >
+                Delete &amp; Notify Host
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

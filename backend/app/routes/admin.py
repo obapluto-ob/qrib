@@ -295,17 +295,22 @@ def delete_user(user_id):
 @admin_bp.get("/properties/moderation")
 @require_admin()
 def get_moderation_queue():
-    """Get properties awaiting moderation/verification"""
-    
+    """Get all properties with optional verified filter"""
+
     page = request.args.get("page", 1, type=int)
     limit = request.args.get("limit", 20, type=int)
-    
-    unverified_properties = Property.query.filter(
-        Property.verified_host == False
-    ).order_by(desc(Property.created_at)).paginate(page=page, per_page=limit, error_out=False)
-    
+    status = request.args.get("status", "all")  # all | pending | approved
+
+    query = Property.query
+    if status == "pending":
+        query = query.filter(Property.verified_host == False)
+    elif status == "approved":
+        query = query.filter(Property.verified_host == True)
+
+    pagination = query.order_by(desc(Property.created_at)).paginate(page=page, per_page=limit, error_out=False)
+
     properties_data = []
-    for prop in unverified_properties.items:
+    for prop in pagination.items:
         properties_data.append({
             "id": prop.id,
             "title": prop.title,
@@ -321,14 +326,14 @@ def get_moderation_queue():
             "image": prop.image or "",
             "created_at": prop.created_at.isoformat(),
         })
-    
+
     return jsonify({
         "data": properties_data,
         "pagination": {
             "page": page,
             "limit": limit,
-            "total": unverified_properties.total,
-            "pages": unverified_properties.pages,
+            "total": pagination.total,
+            "pages": pagination.pages,
         }
     }), 200
 
@@ -368,30 +373,37 @@ def verify_property(property_id):
 @admin_bp.delete("/properties/<int:property_id>")
 @require_admin()
 def delete_property(property_id):
-    """Delete a property listing"""
-    
+    """Delete a property listing and notify the host with a reason"""
+
+    data = request.get_json() or {}
+    reason = data.get("reason", "").strip()
+
     prop = db.session.get(Property, property_id)
-    
     if not prop:
         return jsonify({"error": "Property not found"}), 404
-    
-    # Delete related data
+
+    host_id = prop.host_id
+    prop_title = prop.title
+
+    # Delete related data first
     Message.query.filter(Message.property_id == property_id).delete()
     Review.query.filter(Review.property_id == property_id).delete()
     Booking.query.filter(Booking.property_id == property_id).delete()
-    
     db.session.delete(prop)
-    db.session.commit()
-    
-    # Notify host
+    db.session.flush()
+
+    # Notify host with reason
+    body = f"Your property '{prop_title}' has been removed from Qrib."
+    if reason:
+        body += f" Reason: {reason}"
     notification = Notification(
-        user_id=prop.host_id,
-        title="Property Deleted",
-        body=f"Your property '{prop.title}' has been removed from the platform",
+        user_id=host_id,
+        title="Property Removed",
+        body=body,
     )
     db.session.add(notification)
     db.session.commit()
-    
+
     return jsonify({"message": "Property deleted successfully"}), 200
 
 
