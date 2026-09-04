@@ -19,9 +19,12 @@ def _send(to: str, subject: str, html: str):
         msg["From"] = f"{FROM_NAME} <{GMAIL_USER}>"
         msg["To"] = to
         msg.attach(MIMEText(html, "html"))
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-            server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
-            server.sendmail(GMAIL_USER, to, msg.as_string())
+        with smtplib.SMTP("smtp.gmail.com", 587) as server:
+                server.ehlo()
+                server.starttls()
+                server.ehlo()
+                server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
+                server.sendmail(GMAIL_USER, to, msg.as_string())
     except Exception as e:
         print(f"[email] Failed to send to {to}: {e}")
 

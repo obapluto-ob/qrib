@@ -24,7 +24,10 @@ with app.app_context():
         log("[startup] SMTP: GMAIL_USER or GMAIL_APP_PASSWORD not set — emails disabled")
     else:
         try:
-            with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10) as s:
+            with smtplib.SMTP("smtp.gmail.com", 587, timeout=10) as s:
+                s.ehlo()
+                s.starttls()
+                s.ehlo()
                 s.login(gmail_user, gmail_pass)
             log(f"[startup] SMTP: connected and authenticated as {gmail_user}")
         except Exception as e:
