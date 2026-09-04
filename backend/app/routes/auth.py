@@ -93,9 +93,12 @@ def register():
     ).first()
 
     if existing_email:
-        return jsonify({
-            "error": "An account with this email already exists"
-        }), 409
+        msg = (
+            "This email is linked to a Google account. Please sign in with Google."
+            if existing_email.auth_provider == "google"
+            else "An account with this email already exists"
+        )
+        return jsonify({"error": msg}), 409
 
     # Generate username
     username = email.split("@")[0]
