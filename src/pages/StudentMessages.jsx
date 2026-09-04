@@ -646,7 +646,7 @@ export default function StudentMessages() {
               <input
                 type="date"
                 value={moveInDate}
-                min={addDays(0)}
+                min={addDays(0)} max={addDays(730)}
                 onChange={(e) => {
                   const val = e.target.value;
                   setMoveInDate(val < addDays(0) ? addDays(0) : val);

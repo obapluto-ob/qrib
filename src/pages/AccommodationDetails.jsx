@@ -154,7 +154,7 @@ function ErrorState({ error }) {
               <input
                 type="date"
                 value={moveInDate}
-                min={new Date().toISOString().split("T")[0]}
+                min={new Date().toISOString().split("T")[0]} max={new Date(new Date().setFullYear(new Date().getFullYear()+2)).toISOString().split("T")[0]}
                 onChange={(event) => { const v = event.target.value; const t = new Date().toISOString().split("T")[0]; setMoveInDate(v < t ? t : v); }}
                 className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
               />
@@ -770,7 +770,7 @@ export default function AccommodationDetails() {
               <input
                 type="date"
                 value={moveInDate}
-                min={new Date().toISOString().split("T")[0]}
+                min={new Date().toISOString().split("T")[0]} max={new Date(new Date().setFullYear(new Date().getFullYear()+2)).toISOString().split("T")[0]}
                 onChange={(event) => { const v = event.target.value; const t = new Date().toISOString().split("T")[0]; setMoveInDate(v < t ? t : v); }}
                 className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
               />
