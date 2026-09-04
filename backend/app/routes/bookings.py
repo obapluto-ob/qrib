@@ -69,6 +69,8 @@ def create_booking():
         move_in_date = date.fromisoformat(str(move_in_date))
     except (ValueError, TypeError):
         return jsonify({"error": "Invalid move_in_date format. Use YYYY-MM-DD"}), 400
+    if move_in_date < date.today():
+        return jsonify({"error": "Move-in date cannot be in the past."}), 400
 
     booking = Booking(
         property_id=property_id,
