@@ -62,6 +62,7 @@ class User(db.Model):
 
     reset_token = db.Column(db.String(255), nullable=True)
     reset_token_expires = db.Column(db.DateTime(timezone=True), nullable=True)
+    mpesa_phone = db.Column(db.String(20), nullable=True)
 
     properties = db.relationship(
         "Property",

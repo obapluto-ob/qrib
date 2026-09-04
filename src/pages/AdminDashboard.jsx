@@ -60,6 +60,11 @@ export default function AdminDashboard() {
   const [propertyStatusFilter, setPropertyStatusFilter] = useState("all");
   const [deleteModal, setDeleteModal] = useState(null); // { id, title }
   const [deleteReason, setDeleteReason] = useState("");
+  const [transactions, setTransactions] = useState([]);
+  const [txStatusFilter, setTxStatusFilter] = useState("all");
+  const [payoutModal, setPayoutModal] = useState(null);
+  const [payoutPhone, setPayoutPhone] = useState("");
+  const [payoutLoading, setPayoutLoading] = useState(false);
 
   // Fetch dashboard stats
   useEffect(() => {
@@ -88,6 +93,13 @@ export default function AdminDashboard() {
       fetchVerifications();
     }
   }, [activeTab, currentPage]);
+
+  // Fetch transactions
+  useEffect(() => {
+    if (activeTab === "transactions") {
+      fetchTransactions();
+    }
+  }, [activeTab, txStatusFilter, currentPage]);
 
   const fetchStats = async () => {
     try {
@@ -163,6 +175,45 @@ export default function AdminDashboard() {
       showToast("Error loading verifications", "error");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchTransactions = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${API_URL}/admin/transactions?page=${currentPage}&limit=20&status=${txStatusFilter}`, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setTransactions(data.data);
+      }
+    } catch (error) {
+      showToast("Error loading transactions", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const initiatePayout = async () => {
+    if (!payoutModal) return;
+    setPayoutLoading(true);
+    try {
+      const response = await fetch(`${API_URL}/admin/payouts/initiate`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${getToken()}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ payment_id: payoutModal.paymentId, host_phone: payoutPhone }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Payout failed");
+      showToast(`Payout of KSh ${data.amount?.toLocaleString()} initiated to ${data.host_phone}`, "success");
+      setPayoutModal(null);
+      setPayoutPhone("");
+      fetchTransactions();
+    } catch (err) {
+      showToast(err.message, "error");
+    } finally {
+      setPayoutLoading(false);
     }
   };
 
@@ -332,6 +383,7 @@ export default function AdminDashboard() {
             { id: "users", label: "Users" },
             { id: "properties", label: "Properties" },
             { id: "verifications", label: "Verifications" },
+            { id: "transactions", label: "Transactions" },
             { id: "emails", label: "Send Emails" },
           ].map((tab) => (
             <button
@@ -578,6 +630,100 @@ export default function AdminDashboard() {
           </div>
         )}
 
+        {/* Transactions Tab */}
+        {activeTab === "transactions" && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold">Transactions</h2>
+              <div className="flex gap-2">
+                {["all", "pending", "successful", "failed", "cancelled"].map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => { setTxStatusFilter(s); setCurrentPage(1); }}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-bold capitalize ${
+                      txStatusFilter === s
+                        ? "bg-blue-600 text-white"
+                        : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                    }`}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+              <table className="min-w-full divide-y divide-slate-200 text-sm">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Reference</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Student</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Property</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Host</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Amount</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Payment</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Payout</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Date</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {transactions.length === 0 && (
+                    <tr><td colSpan={9} className="px-4 py-8 text-center text-slate-400">No transactions found.</td></tr>
+                  )}
+                  {transactions.map((tx) => (
+                    <tr key={tx.id} className="hover:bg-slate-50">
+                      <td className="px-4 py-3 font-mono text-xs text-slate-600">{tx.reference}</td>
+                      <td className="px-4 py-3">
+                        <p className="font-semibold text-slate-800">{tx.student_name}</p>
+                        <p className="text-xs text-slate-400">{tx.student_email}</p>
+                      </td>
+                      <td className="px-4 py-3 text-slate-700">{tx.property_title}</td>
+                      <td className="px-4 py-3 text-slate-700">{tx.host_name}</td>
+                      <td className="px-4 py-3 font-bold text-slate-900">KSh {tx.amount?.toLocaleString()}</td>
+                      <td className="px-4 py-3">
+                        <span className={`rounded-full px-2.5 py-1 text-xs font-bold capitalize ${
+                          tx.status === "successful" ? "bg-green-100 text-green-700"
+                          : tx.status === "failed" ? "bg-red-100 text-red-700"
+                          : tx.status === "cancelled" ? "bg-slate-100 text-slate-600"
+                          : "bg-amber-100 text-amber-700"
+                        }`}>{tx.status}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        {tx.payout_status ? (
+                          <span className={`rounded-full px-2.5 py-1 text-xs font-bold capitalize ${
+                            tx.payout_status === "successful" ? "bg-green-100 text-green-700"
+                            : tx.payout_status === "failed" ? "bg-red-100 text-red-700"
+                            : "bg-blue-100 text-blue-700"
+                          }`}>{tx.payout_status}</span>
+                        ) : (
+                          <span className="text-xs text-slate-400">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-slate-500">
+                        {new Date(tx.created_at).toLocaleDateString()}
+                      </td>
+                      <td className="px-4 py-3">
+                        {tx.status === "successful" && !tx.payout_status && (
+                          <button
+                            onClick={() => {
+                              setPayoutModal({ paymentId: tx.id, hostName: tx.host_name, amount: Math.floor(tx.amount * 0.9) });
+                              setPayoutPhone(tx.host_phone || "");
+                            }}
+                            className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-green-700"
+                          >
+                            Pay Host
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
         {/* Emails Tab */}
         {activeTab === "emails" && (
           <div className="max-w-2xl space-y-6">
@@ -659,6 +805,45 @@ export default function AdminDashboard() {
           </div>
         )}
       </main>
+
+      {/* Payout Modal */}
+      {payoutModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <h3 className="text-lg font-black text-slate-900">Pay host</h3>
+            <p className="mt-1 text-sm text-slate-600">
+              Sending payout to <span className="font-semibold">{payoutModal.hostName}</span>.
+              Host receives <span className="font-semibold">KSh {payoutModal.amount?.toLocaleString()}</span> (90% after 10% platform fee).
+            </p>
+            <div className="mt-4">
+              <label className="block text-sm font-bold text-slate-700 mb-2">Host M-Pesa number</label>
+              <input
+                type="tel"
+                value={payoutPhone}
+                onChange={(e) => setPayoutPhone(e.target.value)}
+                placeholder="e.g. 0712345678"
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-green-400"
+              />
+              <p className="text-xs text-slate-400 mt-1">Kenyan number — will be saved for future payouts to this host.</p>
+            </div>
+            <div className="mt-5 flex gap-3 justify-end">
+              <button
+                onClick={() => { setPayoutModal(null); setPayoutPhone(""); }}
+                className="rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={initiatePayout}
+                disabled={payoutLoading}
+                className="rounded-xl bg-green-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-green-700 disabled:opacity-50"
+              >
+                {payoutLoading ? "Sending…" : "Send Payout"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Delete Property Modal */}
       {deleteModal && (

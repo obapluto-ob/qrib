@@ -6,9 +6,10 @@ from datetime import datetime, timezone
 import os
 import functools
 import threading
+import requests
 
 from app.extensions import db
-from app.models import User, Property, Booking, Review, Notification, HostVerification, Payment, Message
+from app.models import User, Property, Booking, Review, Notification, HostVerification, Payment, Message, Payout
 from app.services.email import send_verification_approved, send_verification_rejected, _send
 from app.routes.properties import property_to_dict
 
@@ -652,6 +653,229 @@ def send_admin_email():
     except Exception as e:
         import traceback
         return jsonify({"error": str(e), "trace": traceback.format_exc()}), 500
+
+
+# ============================================================
+# TRANSACTIONS (payments + bookings overview)
+# GET /api/admin/transactions
+# ============================================================
+
+@admin_bp.get("/transactions")
+@require_admin()
+def get_transactions():
+    page = request.args.get("page", 1, type=int)
+    limit = request.args.get("limit", 20, type=int)
+    status_filter = request.args.get("status", "all")
+
+    query = Payment.query
+    if status_filter != "all":
+        query = query.filter(Payment.status == status_filter)
+
+    pagination = query.order_by(desc(Payment.created_at)).paginate(page=page, per_page=limit, error_out=False)
+
+    data = []
+    for p in pagination.items:
+        booking = p.booking
+        student = p.student
+        prop = p.property
+        host = prop.host if prop else None
+        payout = p.payout
+        data.append({
+            "id": p.id,
+            "reference": p.reference,
+            "amount": float(p.amount),
+            "currency": p.currency,
+            "provider": p.provider,
+            "status": p.status,
+            "transaction_id": p.transaction_id,
+            "created_at": p.created_at.isoformat(),
+            "updated_at": p.updated_at.isoformat(),
+            "booking_id": p.booking_id,
+            "booking_status": booking.status if booking else None,
+            "student_name": student.name if student else "Unknown",
+            "student_email": student.email if student else "",
+            "property_title": prop.title if prop else "Unknown",
+            "host_name": host.name if host else "Unknown",
+            "host_id": host.id if host else None,
+            "host_phone": host.mpesa_phone if host else None,
+            "payout_status": payout.status if payout else None,
+            "payout_id": payout.id if payout else None,
+        })
+
+    return jsonify({
+        "data": data,
+        "pagination": {
+            "page": page,
+            "limit": limit,
+            "total": pagination.total,
+            "pages": pagination.pages,
+        }
+    }), 200
+
+
+# ============================================================
+# HOST PAYOUT via M-Pesa B2C
+# POST /api/admin/payouts/initiate
+# ============================================================
+
+@admin_bp.post("/payouts/initiate")
+@require_admin()
+def initiate_payout():
+    """Trigger M-Pesa B2C payout to host for a completed payment."""
+    import base64
+    import re
+    data = request.get_json() or {}
+    payment_id = data.get("payment_id")
+    host_phone = (data.get("host_phone") or "").strip()
+
+    if not payment_id:
+        return jsonify({"error": "payment_id is required"}), 400
+
+    payment = db.session.get(Payment, int(payment_id))
+    if not payment:
+        return jsonify({"error": "Payment not found"}), 404
+    if payment.status != "successful":
+        return jsonify({"error": "Can only pay out for successful payments"}), 409
+    if payment.payout and payment.payout.status in ("successful", "processing"):
+        return jsonify({"error": "Payout already initiated for this payment"}), 409
+
+    prop = payment.property
+    host = prop.host if prop else None
+    if not host:
+        return jsonify({"error": "Host not found"}), 404
+
+    # Use provided phone or fall back to host's saved phone
+    phone = host_phone or host.mpesa_phone or ""
+    digits = re.sub(r"\D", "", phone)
+    if digits.startswith("0"):
+        digits = "254" + digits[1:]
+    elif digits.startswith(("7", "1")):
+        digits = "254" + digits
+    if not re.fullmatch(r"254[17]\d{8}", digits):
+        return jsonify({"error": "Valid Kenyan M-Pesa number required (e.g. 0712345678)"}), 400
+
+    # Save phone on host for future payouts
+    if not host.mpesa_phone:
+        host.mpesa_phone = digits
+        db.session.flush()
+
+    # Platform takes 10% fee, host gets 90%
+    payout_amount = int(float(payment.amount) * 0.90)
+
+    payout = Payout(
+        payment_id=payment.id,
+        host_id=host.id,
+        amount=payout_amount,
+        host_phone=digits,
+        status="pending",
+    )
+    db.session.add(payout)
+    db.session.flush()
+
+    # Check if M-Pesa B2C is configured
+    required = ["MPESA_CONSUMER_KEY", "MPESA_CONSUMER_SECRET", "MPESA_B2C_SHORTCODE",
+                "MPESA_B2C_INITIATOR", "MPESA_B2C_CREDENTIAL", "MPESA_B2C_CALLBACK_URL"]
+    if not all(os.getenv(k) for k in required):
+        # Sandbox/demo mode — mark as processing without real API call
+        payout.status = "processing"
+        payout.gateway_response = "Demo mode — B2C env vars not set"
+        db.session.commit()
+        # Notify host
+        db.session.add(Notification(
+            user_id=host.id,
+            title="Payout Initiated",
+            body=f"A payout of KSh {payout_amount:,} is being processed to {digits}.",
+        ))
+        db.session.commit()
+        return jsonify({
+            "message": "Payout queued (demo mode — configure B2C env vars for live)",
+            "payout_id": payout.id,
+            "amount": payout_amount,
+            "host_phone": digits,
+            "demo": True,
+        }), 201
+
+    # Live B2C call
+    base_url = ("https://api.safaricom.co.ke"
+                if os.getenv("MPESA_ENVIRONMENT", "sandbox").lower() == "production"
+                else "https://sandbox.safaricom.co.ke")
+    try:
+        token_res = requests.get(
+            f"{base_url}/oauth/v1/generate?grant_type=client_credentials",
+            auth=(os.environ["MPESA_CONSUMER_KEY"], os.environ["MPESA_CONSUMER_SECRET"]),
+            timeout=15,
+        )
+        token_res.raise_for_status()
+        token = token_res.json()["access_token"]
+
+        b2c_res = requests.post(
+            f"{base_url}/mpesa/b2c/v1/paymentrequest",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "InitiatorName": os.environ["MPESA_B2C_INITIATOR"],
+                "SecurityCredential": os.environ["MPESA_B2C_CREDENTIAL"],
+                "CommandID": "BusinessPayment",
+                "Amount": payout_amount,
+                "PartyA": os.environ["MPESA_B2C_SHORTCODE"],
+                "PartyB": digits,
+                "Remarks": f"Qrib payout for {prop.title}",
+                "QueueTimeOutURL": os.environ["MPESA_B2C_CALLBACK_URL"],
+                "ResultURL": os.environ["MPESA_B2C_CALLBACK_URL"],
+                "Occasion": f"payout-{payout.id}",
+            },
+            timeout=15,
+        )
+        b2c_data = b2c_res.json()
+        b2c_res.raise_for_status()
+        payout.status = "processing"
+        payout.conversation_id = b2c_data.get("ConversationID")
+        payout.originator_conversation_id = b2c_data.get("OriginatorConversationID")
+        payout.gateway_response = b2c_data.get("ResponseDescription")
+    except Exception as e:
+        payout.status = "failed"
+        payout.gateway_response = str(e)
+        db.session.commit()
+        return jsonify({"error": f"B2C request failed: {e}"}), 502
+
+    db.session.commit()
+    db.session.add(Notification(
+        user_id=host.id,
+        title="Payout Initiated",
+        body=f"A payout of KSh {payout_amount:,} is being sent to {digits}.",
+    ))
+    db.session.commit()
+    return jsonify({
+        "message": "Payout initiated successfully",
+        "payout_id": payout.id,
+        "amount": payout_amount,
+        "host_phone": digits,
+        "demo": False,
+    }), 201
+
+
+@admin_bp.post("/payouts/b2c-callback")
+def b2c_callback():
+    """Safaricom B2C result callback — updates payout status."""
+    body = (request.get_json(silent=True) or {}).get("Result", {})
+    conv_id = body.get("ConversationID")
+    payout = Payout.query.filter_by(conversation_id=conv_id).first() if conv_id else None
+    if payout:
+        payout.status = "successful" if body.get("ResultCode") in (0, "0") else "failed"
+        payout.gateway_response = body.get("ResultDesc")
+        items = body.get("ResultParameters", {}).get("ResultParameter", [])
+        for item in items:
+            if item.get("Key") == "TransactionID":
+                payout.transaction_id = item.get("Value")
+        payout.updated_at = datetime.now(timezone.utc)
+        db.session.commit()
+        if payout.status == "successful":
+            db.session.add(Notification(
+                user_id=payout.host_id,
+                title="Payout Received",
+                body=f"KSh {int(payout.amount):,} has been sent to your M-Pesa {payout.host_phone}.",
+            ))
+            db.session.commit()
+    return jsonify({"ResultCode": 0, "ResultDesc": "Accepted"}), 200
 
 
 # ============================================================
