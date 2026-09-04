@@ -65,6 +65,8 @@ export default function AdminDashboard() {
   const [payoutModal, setPayoutModal] = useState(null);
   const [payoutPhone, setPayoutPhone] = useState("");
   const [payoutLoading, setPayoutLoading] = useState(false);
+  const [rejectModal, setRejectModal] = useState(null);
+  const [rejectReason, setRejectReason] = useState("");
 
   // Fetch dashboard stats
   useEffect(() => {
@@ -590,40 +592,85 @@ export default function AdminDashboard() {
         {activeTab === "verifications" && (
           <div className="space-y-6">
             <h2 className="text-xl font-bold">Pending Host Verifications</h2>
-            <div className="space-y-4">
+            {verifications.length === 0 && (
+              <div className="rounded-xl border border-dashed border-slate-200 bg-white p-10 text-center text-slate-400">No pending verifications.</div>
+            )}
+            <div className="space-y-6">
               {verifications.map((v) => (
                 <div key={v.id} className="rounded-xl border border-slate-200 bg-white p-6">
-                  <div className="flex justify-between items-start">
+                  {/* Header row */}
+                  <div className="flex items-start justify-between gap-4 flex-wrap">
                     <div>
                       <h3 className="text-lg font-bold text-slate-900">{v.host_name}</h3>
-                      <p className="text-sm text-slate-600">{v.host_email}</p>
-                      <p className="mt-2 text-sm">
-                        <span className="font-semibold">ID Number:</span> {v.id_number}
+                      <p className="text-sm text-slate-500">{v.host_email}</p>
+                      <p className="mt-2 text-sm text-slate-700">
+                        <span className="font-semibold">National ID:</span> {v.id_number || "—"}
                       </p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-slate-400 mt-1">
                         Submitted: {new Date(v.created_at).toLocaleDateString()}
                       </p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-shrink-0">
                       <button
                         onClick={() => approveVerification(v.id)}
                         className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-bold text-white hover:bg-green-700"
                       >
-                        <Check className="h-4 w-4" />
-                        Approve
+                        <Check className="h-4 w-4" /> Approve
                       </button>
                       <button
-                        onClick={() => {
-                          const reason = prompt("Rejection reason:");
-                          if (reason) rejectVerification(v.id, reason);
-                        }}
+                        onClick={() => { setRejectModal({ id: v.id, host_name: v.host_name }); setRejectReason(""); }}
                         className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-700"
                       >
-                        <X className="h-4 w-4" />
-                        Reject
+                        <X className="h-4 w-4" /> Reject
                       </button>
                     </div>
                   </div>
+
+                  {/* Document preview */}
+                  {v.document_url ? (
+                    <div className="mt-5">
+                      <p className="text-xs font-bold uppercase text-slate-500 mb-2">Uploaded Document</p>
+                      {/\.(jpg|jpeg|png|gif|webp)$/i.test(v.document_url) || v.document_url.includes("drive.google") || v.document_url.includes("imgur") || v.document_url.includes("cloudinary") || v.document_url.includes("supabase") ? (
+                        <div className="relative">
+                          <img
+                            src={v.document_url}
+                            alt="ID document"
+                            className="max-h-72 w-auto rounded-lg border border-slate-200 object-contain bg-slate-50"
+                            onError={(e) => { e.target.style.display = "none"; e.target.nextSibling.style.display = "flex"; }}
+                          />
+                          <div className="hidden items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
+                            <span>Could not load image preview.</span>
+                            <a href={v.document_url} target="_blank" rel="noreferrer" className="font-bold text-blue-600 underline">Open link</a>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-blue-600">
+                              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" strokeLinecap="round" strokeLinejoin="round"/>
+                              <polyline points="14 2 14 8 20 8" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-slate-700 truncate">{v.document_url}</p>
+                          </div>
+                          <a href={v.document_url} target="_blank" rel="noreferrer" className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700 flex-shrink-0">
+                            Open
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                      No document uploaded by host.
+                    </div>
+                  )}
+
+                  {v.notes && (
+                    <div className="mt-3 rounded-lg border border-slate-100 bg-slate-50 px-4 py-2 text-sm text-slate-600">
+                      <span className="font-semibold">Notes:</span> {v.notes}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -814,6 +861,40 @@ export default function AdminDashboard() {
           </div>
         )}
       </main>
+
+      {/* Reject Verification Modal */}
+      {rejectModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <h3 className="text-lg font-bold text-slate-900">Reject Verification</h3>
+            <p className="mt-1 text-sm text-slate-500">
+              Rejecting <span className="font-semibold">{rejectModal.host_name}</span>. Provide a reason so the host knows what to fix.
+            </p>
+            <textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="e.g. ID document is blurry, please resubmit a clearer photo."
+              rows={3}
+              className="mt-4 w-full rounded-xl border border-slate-200 p-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
+            />
+            <div className="mt-4 flex gap-3">
+              <button
+                onClick={() => { setRejectModal(null); setRejectReason(""); }}
+                className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={!rejectReason.trim()}
+                onClick={() => { rejectVerification(rejectModal.id, rejectReason); setRejectModal(null); setRejectReason(""); }}
+                className="flex-1 rounded-xl bg-red-600 py-2.5 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                Reject
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Payout Modal */}
       {payoutModal && (
