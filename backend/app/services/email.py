@@ -3,34 +3,27 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
+GMAIL_USER = os.environ.get("GMAIL_USER", "")          # e.g. qrib.kenya@gmail.com
+GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD", "")  # 16-char app password
 FROM_NAME = "Qrib"
-FROM_EMAIL = "b7cbc2001@smtp-brevo.com"
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://qrib-mu.vercel.app")
 BRAND = "#2563EB"
 
-SMTP_HOST = "smtp-relay.brevo.com"
-SMTP_PORT = 587
-SMTP_LOGIN = "b7cbc2001@smtp-brevo.com"
-
 
 def _send(to: str, subject: str, html: str):
-    """Returns None on success, error string on failure."""
-    smtp_key = os.environ.get("BREVO_API_KEY", "")
-    if not smtp_key:
-        return "BREVO_API_KEY not set"
+    if not GMAIL_USER or not GMAIL_APP_PASSWORD:
+        return
     try:
         msg = MIMEMultipart("alternative")
         msg["Subject"] = subject
-        msg["From"] = f"{FROM_NAME} <{FROM_EMAIL}>"
+        msg["From"] = f"{FROM_NAME} <{GMAIL_USER}>"
         msg["To"] = to
         msg.attach(MIMEText(html, "html"))
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=10) as server:
-            server.starttls()
-            server.login(SMTP_LOGIN, smtp_key)
-            server.sendmail(FROM_EMAIL, [to], msg.as_string())
-        return None
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
+            server.sendmail(GMAIL_USER, to, msg.as_string())
     except Exception as e:
-        return str(e)
+        print(f"[email] Failed to send to {to}: {e}")
 
 
 def _base(content: str) -> str:
@@ -60,14 +53,14 @@ def _row(label: str, value: str, highlight: bool = False) -> str:
     return f'<tr><td style="padding:10px 14px;background:{bg};border-radius:6px 0 0 6px;color:{color};font-size:14px;width:40%">{label}</td><td style="padding:10px 14px;background:{bg};border-radius:0 6px 6px 0;font-weight:700;color:#0f172a;font-size:14px">{value}</td></tr>'
 
 
-# ─── Welcome ────────────────────────────────────────────────────────────────
+# ─── Welcome ─────────────────────────────────────────────────────────────────
 
 def send_welcome(to: str, name: str, role: str):
+    note = "Complete your verification to start listing properties." if role == "host" else "Start exploring student accommodation near your university."
     cta = _btn(
         "Complete Host Verification" if role == "host" else "Find Accommodation",
         f"{FRONTEND_URL}/host/verification" if role == "host" else f"{FRONTEND_URL}/student/dashboard"
     )
-    note = "Complete your verification to start listing properties." if role == "host" else "Start exploring student accommodation near your university."
     body = f"""<h2 style="margin:0 0 12px;color:#0f172a">Welcome to Qrib, {name}!</h2>
     <p style="color:#475569;line-height:1.6">Your account is ready. {note}</p>
     {cta}
@@ -75,18 +68,18 @@ def send_welcome(to: str, name: str, role: str):
     _send(to, "Welcome to Qrib", _base(body))
 
 
-# ─── Password reset ──────────────────────────────────────────────────────────
+# ─── Password reset ───────────────────────────────────────────────────────────
 
 def send_password_reset(to: str, name: str, token: str):
     link = f"{FRONTEND_URL}/reset-password?token={token}"
     body = f"""<h2 style="margin:0 0 12px;color:#0f172a">Reset your password</h2>
-    <p style="color:#475569;line-height:1.6">Hi {name}, we received a request to reset your Qrib password. Click the button below to set a new one.</p>
+    <p style="color:#475569;line-height:1.6">Hi {name}, we received a request to reset your Qrib password.</p>
     {_btn("Reset Password", link)}
-    <p style="color:#94a3b8;font-size:13px">This link expires in 1 hour. If you did not request this, you can safely ignore this email.</p>"""
+    <p style="color:#94a3b8;font-size:13px">This link expires in 1 hour. If you did not request this, ignore this email.</p>"""
     _send(to, "Reset your Qrib password", _base(body))
 
 
-# ─── Booking: new request (to host) ─────────────────────────────────────────
+# ─── Booking: new request (to host) ──────────────────────────────────────────
 
 def send_booking_request(host_email: str, host_name: str, student_name: str,
                           property_title: str, move_in: str, booking_id: int):
@@ -102,12 +95,12 @@ def send_booking_request(host_email: str, host_name: str, student_name: str,
     _send(host_email, f"New booking request — {property_title}", _base(body))
 
 
-# ─── Booking: approved (to student) ─────────────────────────────────────────
+# ─── Booking: approved (to student) ──────────────────────────────────────────
 
 def send_booking_approved(to: str, name: str, property_title: str,
                            move_in: str, booking_id: int):
     body = f"""<h2 style="margin:0 0 12px;color:#0f172a">Booking approved</h2>
-    <p style="color:#475569;line-height:1.6">Hi {name}, great news — your booking request has been approved by the host.</p>
+    <p style="color:#475569;line-height:1.6">Hi {name}, your booking request has been approved by the host.</p>
     <table style="width:100%;border-collapse:separate;border-spacing:0 4px;margin:20px 0">
       {_row("Property", property_title, highlight=True)}
       {_row("Move-in date", move_in, highlight=True)}
@@ -117,17 +110,17 @@ def send_booking_approved(to: str, name: str, property_title: str,
     _send(to, f"Booking approved — {property_title}", _base(body))
 
 
-# ─── Booking: rejected (to student) ─────────────────────────────────────────
+# ─── Booking: rejected (to student) ──────────────────────────────────────────
 
 def send_booking_rejected(to: str, name: str, property_title: str):
     body = f"""<h2 style="margin:0 0 12px;color:#0f172a">Booking update</h2>
     <p style="color:#475569;line-height:1.6">Hi {name}, unfortunately your booking request for <strong>{property_title}</strong> was not approved at this time.</p>
-    <p style="color:#475569;line-height:1.6">Don't worry — there are many other great options available on Qrib.</p>
+    <p style="color:#475569;line-height:1.6">There are many other great options available on Qrib.</p>
     {_btn("Find Other Accommodation", f"{FRONTEND_URL}/search")}"""
     _send(to, f"Booking update — {property_title}", _base(body))
 
 
-# ─── Booking: payment confirmed (to student) ────────────────────────────────
+# ─── Booking: payment confirmed (to student) ─────────────────────────────────
 
 def send_booking_confirmation(to: str, name: str, property_title: str, move_in: str):
     body = f"""<h2 style="margin:0 0 12px;color:#0f172a">Booking confirmed</h2>
@@ -141,7 +134,7 @@ def send_booking_confirmation(to: str, name: str, property_title: str, move_in: 
     _send(to, f"Booking confirmed — {property_title}", _base(body))
 
 
-# ─── Booking: payment received (to host) ────────────────────────────────────
+# ─── Payment received (to host) ──────────────────────────────────────────────
 
 def send_payment_received(to: str, host_name: str, student_name: str,
                            property_title: str, amount: str, move_in: str):
@@ -157,23 +150,22 @@ def send_payment_received(to: str, host_name: str, student_name: str,
     _send(to, f"Payment received — {property_title}", _base(body))
 
 
-# ─── Verification: approved (to host) ───────────────────────────────────────
+# ─── Verification: approved (to host) ────────────────────────────────────────
 
 def send_verification_approved(to: str, name: str):
     body = f"""<h2 style="margin:0 0 12px;color:#0f172a">Verification approved</h2>
-    <p style="color:#475569;line-height:1.6">Hi {name}, your host account has been verified. You can now list properties on Qrib and start receiving bookings.</p>
+    <p style="color:#475569;line-height:1.6">Hi {name}, your host account has been verified. You can now list properties on Qrib.</p>
     {_btn("Add Your First Property", f"{FRONTEND_URL}/host/add-property", "#16a34a")}"""
     _send(to, "Host verification approved", _base(body))
 
 
-# ─── Verification: rejected (to host) ───────────────────────────────────────
+# ─── Verification: rejected (to host) ────────────────────────────────────────
 
 def send_verification_rejected(to: str, name: str, reason: str):
     body = f"""<h2 style="margin:0 0 12px;color:#0f172a">Verification update</h2>
-    <p style="color:#475569;line-height:1.6">Hi {name}, your verification submission needs an update before we can approve your account.</p>
+    <p style="color:#475569;line-height:1.6">Hi {name}, your verification submission needs an update.</p>
     <div style="background:#fef2f2;border-left:4px solid #ef4444;padding:14px 18px;border-radius:6px;margin:20px 0">
       <p style="margin:0;color:#b91c1c;font-size:14px"><strong>Reason:</strong> {reason}</p>
     </div>
-    {_btn("Resubmit Verification", f"{FRONTEND_URL}/host/verification", "#dc2626")}
-    <p style="color:#94a3b8;font-size:13px">Address the issue above and resubmit your documents.</p>"""
+    {_btn("Resubmit Verification", f"{FRONTEND_URL}/host/verification", "#dc2626")}"""
     _send(to, "Host verification update", _base(body))

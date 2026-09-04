@@ -30,3 +30,7 @@ services:
         value: https://qrib-f4sk.onrender.com/api/payments/mpesa/callback
       - key: RESEND_API_KEY
         sync: false
+      - key: GMAIL_USER
+        sync: false
+      - key: GMAIL_APP_PASSWORD
+        sync: false
