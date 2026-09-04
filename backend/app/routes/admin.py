@@ -256,53 +256,80 @@ def update_user_role(user_id):
 @admin_bp.delete("/users/<int:user_id>")
 @require_admin()
 def delete_user(user_id):
-    """Delete a user and their associated data"""
-    
-    # Prevent deleting yourself
+    """Delete a user and all associated data in safe FK order."""
+
     admin_id = int(get_jwt_identity())
     if admin_id == user_id:
         return jsonify({"error": "Cannot delete your own account"}), 400
-    
+
     user = db.session.get(User, user_id)
-    
     if not user:
         return jsonify({"error": "User not found"}), 404
-    
-    # Delete messages involving this user
-    Message.query.filter(
-        db.or_(Message.sender_id == user_id, Message.receiver_id == user_id)
-    ).delete()
-    Notification.query.filter(Notification.user_id == user_id).delete()
-    Review.query.filter(Review.user_id == user_id).delete()
 
-    if user.role == "host":
+    try:
+        # 1. Collect all property IDs owned by this user (if host)
         property_ids = [p.id for p in Property.query.filter_by(host_id=user_id).all()]
+
+        # 2. Collect all booking IDs — either as student or via host's properties
+        student_booking_ids = [b.id for b in Booking.query.filter_by(student_id=user_id).all()]
+        host_booking_ids = [b.id for b in Booking.query.filter(Booking.property_id.in_(property_ids)).all()] if property_ids else []
+        all_booking_ids = list(set(student_booking_ids + host_booking_ids))
+
+        # 3. Collect all payment IDs linked to those bookings
+        payment_ids = [p.id for p in Payment.query.filter(Payment.booking_id.in_(all_booking_ids)).all()] if all_booking_ids else []
+        # Also payments where student_id = user_id
+        payment_ids += [p.id for p in Payment.query.filter_by(student_id=user_id).all()]
+        payment_ids = list(set(payment_ids))
+
+        # 4. Delete Payouts first (FK → payments.id AND users.id)
+        if payment_ids:
+            Payout.query.filter(Payout.payment_id.in_(payment_ids)).delete(synchronize_session=False)
+        Payout.query.filter_by(host_id=user_id).delete(synchronize_session=False)
+
+        # 5. Delete Payments
+        if payment_ids:
+            Payment.query.filter(Payment.id.in_(payment_ids)).delete(synchronize_session=False)
+
+        # 6. Delete Reviews (user_id, booking_id, property_id)
+        Review.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+        if all_booking_ids:
+            Review.query.filter(Review.booking_id.in_(all_booking_ids)).delete(synchronize_session=False)
         if property_ids:
-            # Clean up everything linked to host's properties
-            booking_ids = [b.id for b in Booking.query.filter(Booking.property_id.in_(property_ids)).all()]
-            if booking_ids:
-                Payment.query.filter(Payment.booking_id.in_(booking_ids)).delete(synchronize_session=False)
-                Message.query.filter(Message.booking_id.in_(booking_ids)).delete(synchronize_session=False)
-                Review.query.filter(Review.booking_id.in_(booking_ids)).delete(synchronize_session=False)
-                Booking.query.filter(Booking.id.in_(booking_ids)).delete(synchronize_session=False)
-            PropertyImage.query.filter(PropertyImage.property_id.in_(property_ids)).delete(synchronize_session=False)
-            Message.query.filter(Message.property_id.in_(property_ids)).delete(synchronize_session=False)
             Review.query.filter(Review.property_id.in_(property_ids)).delete(synchronize_session=False)
+
+        # 7. Delete Messages
+        Message.query.filter(
+            db.or_(Message.sender_id == user_id, Message.receiver_id == user_id)
+        ).delete(synchronize_session=False)
+        if all_booking_ids:
+            Message.query.filter(Message.booking_id.in_(all_booking_ids)).delete(synchronize_session=False)
+        if property_ids:
+            Message.query.filter(Message.property_id.in_(property_ids)).delete(synchronize_session=False)
+
+        # 8. Delete Notifications
+        Notification.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+
+        # 9. Delete Bookings
+        if all_booking_ids:
+            Booking.query.filter(Booking.id.in_(all_booking_ids)).delete(synchronize_session=False)
+
+        # 10. Delete Property images and Properties
+        if property_ids:
+            PropertyImage.query.filter(PropertyImage.property_id.in_(property_ids)).delete(synchronize_session=False)
             Property.query.filter(Property.id.in_(property_ids)).delete(synchronize_session=False)
-        HostVerification.query.filter_by(host_id=user_id).delete()
 
-    if user.role == "student":
-        booking_ids = [b.id for b in Booking.query.filter_by(student_id=user_id).all()]
-        if booking_ids:
-            Payment.query.filter(Payment.booking_id.in_(booking_ids)).delete(synchronize_session=False)
-            Message.query.filter(Message.booking_id.in_(booking_ids)).delete(synchronize_session=False)
-            Review.query.filter(Review.booking_id.in_(booking_ids)).delete(synchronize_session=False)
-            Booking.query.filter(Booking.id.in_(booking_ids)).delete(synchronize_session=False)
+        # 11. Delete Host Verification
+        HostVerification.query.filter_by(host_id=user_id).delete(synchronize_session=False)
 
-    db.session.delete(user)
-    db.session.commit()
+        # 12. Finally delete the user
+        db.session.delete(user)
+        db.session.commit()
 
-    return jsonify({"message": "User deleted successfully"}), 200
+        return jsonify({"message": "User deleted successfully"}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Delete failed: {str(e)}"}), 500
 
 
 # ============================================================
