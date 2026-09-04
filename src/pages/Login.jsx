@@ -56,17 +56,17 @@ export default function Login() {
           setLoading(true);
           try {
             const currentIntent = intentRef.current;
-            const result = await googleLogin({ credential: response.credential });
+            const currentRole = currentIntent === "host" ? "host" : "student";
+            const result = await googleLogin({ credential: response.credential, role: currentRole });
 
             if (!result.ok && result.is_new_user) {
-              // New user — show role picker, pre-select based on intent
+              // Backend needs explicit role confirmation — show picker
               setGooglePending({ credential: response.credential });
-              setGoogleRole(currentIntent === "host" ? "host" : "student");
+              setGoogleRole(currentRole);
             } else if (result.ok) {
               const userRole = result.user?.role;
               if (currentIntent === "host" && userRole === "student") {
-                // Existing student signing in with Google via host intent
-                // Upgrade their account seamlessly
+                // Existing student signing in with Google via host intent — upgrade
                 const upgrade = await upgradeToHost();
                 if (upgrade.ok) {
                   showToast("Account upgraded to host!", "success");

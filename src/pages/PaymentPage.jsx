@@ -191,7 +191,7 @@ export default function PaymentPage() {
                 Go to dashboard
               </button>
               <Link
-                to={`/messages`}
+                to={`/messages${booking?.host_id ? `?user=${booking.host_id}` : ""}`}
                 className="rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50"
               >
                 Message host
