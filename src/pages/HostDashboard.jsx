@@ -130,9 +130,14 @@ export default function HostDashboard() {
             id: booking.id,
             student: booking.student_name || "Student",
             studentId: booking.student_id,
+            studentEmail: booking.student_email || "",
             property: normalizedProperties.find((item) => Number(item.id) === Number(booking.property_id))?.title || "Property",
             status: booking.status ? booking.status.charAt(0).toUpperCase() + booking.status.slice(1) : "Pending",
             date: booking.created_at ? new Date(booking.created_at).toLocaleDateString() : "Today",
+            paymentStatus: booking.payment_status || null,
+            paymentAmount: booking.payment_amount || null,
+            paymentDate: booking.payment_date ? new Date(booking.payment_date).toLocaleDateString() : null,
+            paymentReference: booking.payment_reference || null,
           }))
         );
       } catch (error) {
@@ -274,8 +279,10 @@ export default function HostDashboard() {
           </div>
 
           <div className="border border-line rounded-xl p-6">
-            <p className="text-sm text-muted">Monthly earnings</p>
-            <p className="text-3xl font-extrabold text-ink mt-2">KSh {hostListings.reduce((total, item) => total + Number(item.pricePerMonth || 0), 0).toLocaleString()}</p>
+            <p className="text-sm text-muted">Total earned</p>
+            <p className="text-3xl font-extrabold text-ink mt-2">
+              KSh {bookingRequests.filter(b => b.paymentStatus === "successful").reduce((sum, b) => sum + (b.paymentAmount || 0), 0).toLocaleString()}
+            </p>
           </div>
         </div>
 
@@ -302,11 +309,11 @@ export default function HostDashboard() {
                     <p className="text-xs text-slate-400 mt-1">{request.date}</p>
                   </div>
 
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 flex-wrap">
                     <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${
-                      request.status === "Accepted" || request.status === "Approved"
+                      request.status === "Accepted" || request.status === "Approved" || request.status === "Completed"
                         ? "bg-emerald-100 text-emerald-700"
-                        : request.status === "Rejected"
+                        : request.status === "Rejected" || request.status === "Cancelled"
                           ? "bg-red-100 text-red-700"
                           : request.status === "Negotiating"
                             ? "bg-amber-100 text-amber-700"
@@ -314,6 +321,15 @@ export default function HostDashboard() {
                     }`}>
                       {request.status}
                     </span>
+                    {request.paymentStatus && (
+                      <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${
+                        request.paymentStatus === "successful" ? "bg-green-100 text-green-700"
+                        : request.paymentStatus === "failed" ? "bg-red-100 text-red-700"
+                        : "bg-amber-100 text-amber-700"
+                      }`}>
+                        {request.paymentStatus === "successful" ? `Paid KSh ${request.paymentAmount?.toLocaleString()}` : `Payment ${request.paymentStatus}`}
+                      </span>
+                    )}
                     {(request.status === "Pending" || request.status === "Negotiating") && (
                       <>
                         <button
@@ -342,6 +358,52 @@ export default function HostDashboard() {
             )}
           </div>
         </section>
+
+        {/* Earnings Section */}
+        {bookingRequests.some(b => b.paymentStatus === "successful") && (
+          <section className="mt-10">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h2 className="text-xl font-bold text-ink">Earnings</h2>
+                <p className="text-sm text-muted mt-1">Payments received from students.</p>
+              </div>
+              <span className="rounded-full bg-green-50 px-3 py-1.5 text-xs font-bold text-green-700">
+                {bookingRequests.filter(b => b.paymentStatus === "successful").length} paid
+              </span>
+            </div>
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+              <table className="min-w-full divide-y divide-slate-200 text-sm">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Student</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Property</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Amount</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Reference</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Date</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Payout</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {bookingRequests.filter(b => b.paymentStatus === "successful").map(b => (
+                    <tr key={b.id} className="hover:bg-slate-50">
+                      <td className="px-4 py-3">
+                        <p className="font-semibold text-slate-800">{b.student}</p>
+                        <p className="text-xs text-slate-400">{b.studentEmail}</p>
+                      </td>
+                      <td className="px-4 py-3 text-slate-700">{b.property}</td>
+                      <td className="px-4 py-3 font-bold text-slate-900">KSh {b.paymentAmount?.toLocaleString()}</td>
+                      <td className="px-4 py-3 font-mono text-xs text-slate-500">{b.paymentReference || "—"}</td>
+                      <td className="px-4 py-3 text-xs text-slate-500">{b.paymentDate || "—"}</td>
+                      <td className="px-4 py-3">
+                        <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-700">Pending payout</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
 
         <section className="mt-10">
           <div className="flex items-center justify-between mb-5">

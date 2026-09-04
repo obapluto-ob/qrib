@@ -253,6 +253,7 @@ def respond_booking(booking_id):
 def booking_to_dict(booking):
     prop = booking.property
     student = booking.student
+    payment = booking.payment
     return {
         "id": booking.id,
         "property_id": booking.property_id,
@@ -262,7 +263,12 @@ def booking_to_dict(booking):
         "host_id": prop.host_id if prop else None,
         "student_id": booking.student_id,
         "student_name": student.name if student else None,
+        "student_email": student.email if student else None,
         "move_in_date": (str(booking.move_in_date) if booking.move_in_date else None),
         "status": booking.status,
         "created_at": (booking.created_at.isoformat() if booking.created_at else None),
+        "payment_status": payment.status if payment else None,
+        "payment_amount": float(payment.amount) if payment else None,
+        "payment_reference": payment.reference if payment else None,
+        "payment_date": payment.updated_at.isoformat() if payment and payment.updated_at else None,
     }

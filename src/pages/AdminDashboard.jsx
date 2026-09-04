@@ -662,6 +662,7 @@ export default function AdminDashboard() {
                     <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Host</th>
                     <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Amount</th>
                     <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Payment</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Booking</th>
                     <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Payout</th>
                     <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Date</th>
                     <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Action</th>
@@ -688,6 +689,14 @@ export default function AdminDashboard() {
                           : tx.status === "cancelled" ? "bg-slate-100 text-slate-600"
                           : "bg-amber-100 text-amber-700"
                         }`}>{tx.status}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`rounded-full px-2.5 py-1 text-xs font-bold capitalize ${
+                          tx.booking_status === "completed" ? "bg-green-100 text-green-700"
+                          : tx.booking_status === "cancelled" ? "bg-red-100 text-red-700"
+                          : tx.booking_status === "approved" ? "bg-blue-100 text-blue-700"
+                          : "bg-slate-100 text-slate-600"
+                        }`}>{tx.booking_status || "—"}</span>
                       </td>
                       <td className="px-4 py-3">
                         {tx.payout_status ? (
