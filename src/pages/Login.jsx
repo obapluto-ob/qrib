@@ -6,9 +6,6 @@ import { useToast } from "../context/useToast";
 const API_URL = import.meta.env.VITE_API_URL;
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
-// Module-level flag — persists across re-renders and StrictMode double-invocations
-let googleInitialised = false;
-
 export default function Login() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
@@ -30,8 +27,13 @@ export default function Login() {
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotSent, setForgotSent] = useState(false);
   const googleBtnRef = useRef(null);
-  const intentRef = useRef(intent); // always fresh inside Google callback
+  const googleInitialised = useRef(false);
+  const intentRef = useRef(intent);
   intentRef.current = intent;
+  const roleRef = useRef(role);
+  roleRef.current = role;
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
 
   // Google role picker
   const [googlePending, setGooglePending] = useState(null); // { credential }
@@ -47,8 +49,8 @@ export default function Login() {
 
     const initializeGoogle = () => {
       if (!window.google?.accounts?.id || !googleBtnRef.current) return false;
-      if (googleInitialised) return true;
-      googleInitialised = true;
+      if (googleInitialised.current) return true;
+      googleInitialised.current = true;
 
       window.google.accounts.id.initialize({
         client_id: GOOGLE_CLIENT_ID,
@@ -56,7 +58,7 @@ export default function Login() {
           setLoading(true);
           try {
             const currentIntent = intentRef.current;
-            const currentRole = currentIntent === "host" ? "host" : "student";
+            const currentRole = currentIntent === "host" ? "host" : (modeRef.current === "signup" ? roleRef.current : "student");
             const result = await googleLogin({ credential: response.credential, role: currentRole });
 
             if (!result.ok && result.is_new_user) {
@@ -78,7 +80,7 @@ export default function Login() {
                 showToast("Signed in with Google.", "success");
                 navigate(
                   userRole === "host"
-                    ? (currentIntent === "host" ? "/host/verification" : "/host/dashboard")
+                    ? (result.is_new_user || currentIntent === "host" ? "/host/verification" : "/host/dashboard")
                     : "/student/dashboard",
                   { replace: true }
                 );
@@ -109,7 +111,10 @@ export default function Login() {
     }, 100);
     initializeGoogle();
 
-    return () => clearInterval(readyCheck);
+    return () => {
+      clearInterval(readyCheck);
+      googleInitialised.current = false;
+    };
   }, []);
 
   const [form, setForm] = useState({
