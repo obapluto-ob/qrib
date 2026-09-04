@@ -150,7 +150,7 @@ export default function PaymentPage() {
                 <path d="m5 12 4 4L19 6" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
-            <h1 className="mt-6 text-3xl font-black text-slate-900">Payment Successful!</h1>
+            <h1 className="mt-6 text-3xl font-black text-slate-900">Payment Confirmed!</h1>
             <p className="mt-3 text-slate-500">
               Your payment of <span className="font-bold text-slate-800">KSh {amount.toLocaleString()}</span> has been received.
             </p>
@@ -172,6 +172,17 @@ export default function PaymentPage() {
                 </div>
               </div>
             )}
+
+            {/* What happens next */}
+            <div className="mt-6 rounded-xl border border-blue-100 bg-blue-50 p-5 text-left">
+              <p className="text-sm font-black text-blue-900 mb-3">What happens next</p>
+              <ol className="space-y-2 text-sm text-blue-800">
+                <li className="flex gap-2"><span className="font-bold">1.</span> The host has been notified of your payment.</li>
+                <li className="flex gap-2"><span className="font-bold">2.</span> Contact the host via chat to arrange move-in details and key collection.</li>
+                <li className="flex gap-2"><span className="font-bold">3.</span> After moving in, leave a review to help other students.</li>
+              </ol>
+            </div>
+
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
               <button
                 onClick={() => navigate("/student/dashboard")}
@@ -179,8 +190,11 @@ export default function PaymentPage() {
               >
                 Go to dashboard
               </button>
-              <Link to="/search" className="rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50">
-                Browse more listings
+              <Link
+                to={`/messages`}
+                className="rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50"
+              >
+                Message host
               </Link>
             </div>
           </div>

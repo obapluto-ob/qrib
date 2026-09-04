@@ -10,7 +10,7 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
 from app.extensions import db
-from app.models import Booking, Payment, Property, User
+from app.models import Booking, Payment, Property, User, Notification
 
 
 payments_bp = Blueprint("payments", __name__, url_prefix="/api/payments")
@@ -264,12 +264,35 @@ def mpesa_callback():
     checkout_id = callback.get("CheckoutRequestID")
     payment = Payment.query.filter_by(checkout_request_id=checkout_id).first() if checkout_id else None
     if payment:
-        payment.status = "successful" if callback.get("ResultCode") in (0, "0") else "failed"
+        success = callback.get("ResultCode") in (0, "0")
+        payment.status = "successful" if success else "failed"
         payment.gateway_response = callback.get("ResultDesc")
         items = callback.get("CallbackMetadata", {}).get("Item", [])
         metadata = {item.get("Name"): item.get("Value") for item in items}
         payment.transaction_id = metadata.get("MpesaReceiptNumber") or payment.transaction_id
         payment.updated_at = datetime.now(timezone.utc)
+
+        if success:
+            # Mark booking completed
+            booking = db.session.get(Booking, payment.booking_id)
+            if booking:
+                booking.status = "completed"
+            # Notify student
+            prop = db.session.get(Property, payment.property_id)
+            prop_title = prop.title if prop else "your property"
+            db.session.add(Notification(
+                user_id=payment.student_id,
+                title="Payment confirmed",
+                body=f"Your payment of KSh {int(payment.amount):,} for '{prop_title}' was received. You can now leave a review after moving in.",
+            ))
+            # Notify host
+            if prop:
+                db.session.add(Notification(
+                    user_id=prop.host_id,
+                    title="Payment received",
+                    body=f"A student has paid KSh {int(payment.amount):,} for '{prop_title}'. Payout will be processed by Qrib.",
+                ))
+
         db.session.commit()
     return jsonify({"ResultCode": 0, "ResultDesc": "Accepted"}), 200
 
@@ -318,6 +341,25 @@ def update_payment_status(payment_id):
     payment.gateway_response = data.get("gateway_response") or payment.gateway_response
     payment.transaction_id = data.get("transaction_id") or payment.transaction_id
     payment.updated_at = datetime.now(timezone.utc)
+
+    if status == "successful":
+        booking = db.session.get(Booking, payment.booking_id)
+        if booking:
+            booking.status = "completed"
+        prop = db.session.get(Property, payment.property_id)
+        prop_title = prop.title if prop else "your property"
+        db.session.add(Notification(
+            user_id=payment.student_id,
+            title="Payment confirmed",
+            body=f"Your payment of KSh {int(payment.amount):,} for '{prop_title}' was received. You can now leave a review after moving in.",
+        ))
+        if prop:
+            db.session.add(Notification(
+                user_id=prop.host_id,
+                title="Payment received",
+                body=f"A student has paid KSh {int(payment.amount):,} for '{prop_title}'. Payout will be processed by Qrib.",
+            ))
+
     db.session.commit()
 
     return jsonify({
